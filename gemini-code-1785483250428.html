@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp — Windows 10 Mobile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            padding: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 300;
+            color: #00a4ef;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 14px;
+            color: #888888;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .send-box {
+            background-color: #1f1f1f;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-left: 4px solid #00a4ef;
+        }
+        input, textarea {
+            width: 100%;
+            background: #2b2b2b;
+            border: 1px solid #3d3d3d;
+            color: #fff;
+            padding: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            margin-bottom: 10px;
+            outline: none;
+        }
+        input:focus, textarea:focus {
+            border-color: #00a4ef;
+        }
+        button {
+            width: 100%;
+            background-color: #00a4ef;
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        button:active {
+            background-color: #0078d7;
+        }
+        .chat-history {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message-item {
+            background: #1a1a1a;
+            padding: 12px;
+            border-left: 3px solid #555;
+        }
+        .message-item.outgoing {
+            border-left-color: #00a4ef;
+            background: #112233;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .message-body {
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+        #status {
+            font-size: 13px;
+            margin-top: 8px;
+            color: #ff4444;
+        }
+        #status.success {
+            color: #00cc66;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>WhatsApp</h1>
+
+    <div class="send-box">
+        <div class="section-title">Новое сообщение</div>
+        <input type="text" id="phone" placeholder="Номер (например: 77071234567)" />
+        <textarea id="message" rows="3" placeholder="Введите текст сообщения..."></textarea>
+        <button onclick="sendMessage()">Отправить</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="section-title">История сообщений</div>
+    <div class="chat-history" id="chatHistory">
+        <!-- Сообщения будут появляться здесь -->
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const chatHistory = document.getElementById('chatHistory');
+        const statusDiv = document.getElementById('status');
+
+        async function sendMessage() {
+            const phone = document.getElementById('phone').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!phone || !message) {
+                showStatus('Заполните номер и текст сообщения', false);
+                return;
+            }
+
+            showStatus('Отправка...', true);
+
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, message })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Сообщение отправлено!', true);
+                    
+                    // Добавляем отправленное сообщение в ленту
+                    addMessageToUI('Вы (' + phone + ')', message, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), true);
+                    
+                    document.getElementById('message').value = '';
+                } else {
+                    showStatus(data.error || 'Ошибка отправки', false);
+                }
+            } catch (err) {
+                showStatus('Ошибка сети или сервера', false);
+            }
+        }
+
+        function showStatus(text, isSuccess) {
+            statusDiv.textContent = text;
+            statusDiv.className = isSuccess ? 'success' : '';
+        }
+
+        function addMessageToUI(from, text, time, isOutgoing = false) {
+            const item = document.createElement('div');
+            item.className = 'message-item' + (isOutgoing ? ' outgoing' : '');
+            item.innerHTML = `
+                <div class="message-header">
+                    <span>${from}</span>
+                    <span>${time}</span>
+                </div>
+                <div class="message-body">${text}</div>
+            `;
+            chatHistory.prepend(item);
+        }
+
+        // Прием входящих сообщений в реальном времени
+        socket.on('new_message', (data) => {
+            addMessageToUI(data.from, data.body, data.time, false);
+        });
+    </script>
+</body>
+</html>
