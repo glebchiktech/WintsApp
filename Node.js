@@ -1,72 +1,72 @@
 const express = require('express');
-const app = express();
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode');
 
+const app = express();
 app.use(express.static('public'));
 app.use(express.json());
 
-// Простая база данных активных пользователей (в памяти сервера)
-const activeUsers = new Map();
+// Инициализируем клиент WhatsApp с сохранением сессии
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: { args: ['--no-sandbox'] }
+});
 
-// 1. Авторизация / Вход по своему номеру
-app.post('/api/login', (req, res) => {
-    const { myPhone } = req.body;
+let isReady = false;
+let currentQr = '';
 
-    if (!myPhone) {
-        return res.status(400).json({ success: false, error: 'Введите ваш номер' });
+client.on('qr', (qr) => {
+    // Генерируем QR-код в формате картинки Base64
+    qrcode.toDataURL(qr, (err, url) => {
+        currentQr = url;
+    });
+    isReady = false;
+    console.log('[WA] Нужна авторизация! Отсканируйте QR-код.');
+});
+
+client.on('ready', () => {
+    isReady = true;
+    currentQr = '';
+    console.log('[WA] Сервер успешно подключен к WhatsApp!');
+});
+
+client.initialize();
+
+// API 1: Проверка статуса (авторизован или нужен QR)
+app.get('/api/status', (req, res) => {
+    res.json({ isReady, qr: currentQr });
+});
+
+// API 2: Фоновая отправка сообщения
+app.post('/api/send-direct', async (req, res) => {
+    if (!isReady) {
+        return res.status(400).json({ success: false, error: 'Сервер ещё не подключен к WhatsApp! Отсканируйте QR-код.' });
     }
 
-    let cleanPhone = myPhone.replace(/\D/g, '');
+    const { phone, message } = req.body;
+
+    if (!phone || !message) {
+        return res.status(400).json({ success: false, error: 'Заполните номер и текст сообщения!' });
+    }
+
+    // Приводим номер к международному формату WhatsApp (1234567890@c.us)
+    let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
         cleanPhone = '7' + cleanPhone.slice(1);
     }
+    const chatId = `${cleanPhone}@c.us`;
 
-    // Запоминаем пользователя в базе
-    activeUsers.set(cleanPhone, {
-        loginTime: new Date(),
-        status: 'active'
-    });
-
-    console.log(`[БАЗА] Пользователь авторизован: +${cleanPhone}`);
-
-    res.json({
-        success: true,
-        user: {
-            phone: cleanPhone
-        }
-    });
-});
-
-// 2. Отправка сообщения получателю
-app.post('/api/send-message', (req, res) => {
-    const { senderPhone, recipientPhone, message } = req.body;
-
-    let cleanSender = senderPhone ? senderPhone.replace(/\D/g, '') : '';
-    let cleanRecipient = recipientPhone ? recipientPhone.replace(/\D/g, '') : '';
-
-    if (cleanSender.length === 11 && cleanSender.startsWith('8')) cleanSender = '7' + cleanSender.slice(1);
-    if (cleanRecipient.length === 11 && cleanRecipient.startsWith('8')) cleanRecipient = '7' + cleanRecipient.slice(1);
-
-    // Проверяем, есть ли отправитель в нашей базе
-    if (!activeUsers.has(cleanSender)) {
-        return res.status(403).json({ success: false, error: 'Сессия не найдена. Войдите снова.' });
+    try {
+        // Сервер сам отправляет сообщение в сеть WhatsApp
+        await client.sendMessage(chatId, message);
+        console.log(`[УСПЕХ] Сообщение отправлено на +${cleanPhone}`);
+        
+        // Отправляем сайту ответ "Успешно отправлено"
+        res.json({ success: true, message: 'Сообщение успешно доставлено!' });
+    } catch (err) {
+        console.error('[ОШИБКА ОTПРАВКИ]', err);
+        res.json({ success: false, error: 'Не удалось отправить сообщение. Проверьте номер.' });
     }
-
-    if (!cleanRecipient) {
-        return res.status(400).json({ success: false, error: 'Укажите номер получателя' });
-    }
-
-    const encodedMsg = encodeURIComponent(message || '');
-    
-    // Формируем прямую ссылку пересылки
-    const waUrl = `https://wa.me/${cleanRecipient}?text=${encodedMsg}`;
-
-    console.log(`[ОТПРАВКА] От: +${cleanSender} -> Кому: +${cleanRecipient}`);
-
-    res.json({
-        success: true,
-        recipient: cleanRecipient,
-        waUrl: waUrl
-    });
 });
 
 const PORT = process.env.PORT || 3000;
