@@ -1,75 +1,93 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 app.use(express.static('public'));
 app.use(express.json());
 
-// Инициализируем клиент WhatsApp с сохранением сессии
+// Инициализация WhatsApp с автоматическим сохранением сессии
 const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: { args: ['--no-sandbox'] }
+    puppeteer: {
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
 });
 
-let isReady = false;
-let currentQr = '';
-
+// 1. Генерация QR-кода при первом входе
 client.on('qr', (qr) => {
-    // Генерируем QR-код в формате картинки Base64
     qrcode.toDataURL(qr, (err, url) => {
-        currentQr = url;
+        io.emit('qr', url); // Отправляем QR-код на сайт
     });
-    isReady = false;
-    console.log('[WA] Нужна авторизация! Отсканируйте QR-код.');
+    console.log('[WA] Нужна авторизация! Отсканируйте QR-код на сайте.');
 });
 
+// 2. Успешное подключение к WhatsApp
 client.on('ready', () => {
-    isReady = true;
-    currentQr = '';
     console.log('[WA] Сервер успешно подключен к WhatsApp!');
+    io.emit('ready', true);
+});
+
+// 3. Входящие сообщения (ОТВЕТЫ СОБЕСЕДНИКА)
+client.on('message', async (msg) => {
+    const contact = await msg.getContact();
+    const cleanPhone = msg.from.replace('@c.us', '');
+
+    console.log(`[ВХОДЯЩЕЕ] От +${cleanPhone}: ${msg.body}`);
+
+    // Пересылаем ответ собеседника прямо на наш сайт в реальном времени!
+    io.emit('incoming_message', {
+        from: cleanPhone,
+        senderName: contact.pushname || contact.name || cleanPhone,
+        text: msg.body,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
 });
 
 client.initialize();
 
-// API 1: Проверка статуса (авторизован или нужен QR)
-app.get('/api/status', (req, res) => {
-    res.json({ isReady, qr: currentQr });
-});
+// Socket.io для обработки действий с сайта
+io.on('connection', (socket) => {
+    // При подключении сайта проверяем, готов ли WhatsApp
+    socket.emit('status', { isReady: client.info ? true : false });
 
-// API 2: Фоновая отправка сообщения
-app.post('/api/send-direct', async (req, res) => {
-    if (!isReady) {
-        return res.status(400).json({ success: false, error: 'Сервер ещё не подключен к WhatsApp! Отсканируйте QR-код.' });
-    }
+    // Отправка сообщения с сайта
+    socket.on('send_message', async (data) => {
+        const { phone, message } = data;
 
-    const { phone, message } = req.body;
+        let cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
+            cleanPhone = '7' + cleanPhone.slice(1);
+        }
 
-    if (!phone || !message) {
-        return res.status(400).json({ success: false, error: 'Заполните номер и текст сообщения!' });
-    }
+        const chatId = `${cleanPhone}@c.us`;
 
-    // Приводим номер к международному формату WhatsApp (1234567890@c.us)
-    let cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
-        cleanPhone = '7' + cleanPhone.slice(1);
-    }
-    const chatId = `${cleanPhone}@c.us`;
+        try {
+            // Сервер сам отправляет сообщение в WhatsApp (БЕЗ РЕДИРЕКТОВ)
+            await client.sendMessage(chatId, message);
+            console.log(`[ОТПРАВЛЕНО] На +${cleanPhone}: ${message}`);
 
-    try {
-        // Сервер сам отправляет сообщение в сеть WhatsApp
-        await client.sendMessage(chatId, message);
-        console.log(`[УСПЕХ] Сообщение отправлено на +${cleanPhone}`);
-        
-        // Отправляем сайту ответ "Успешно отправлено"
-        res.json({ success: true, message: 'Сообщение успешно доставлено!' });
-    } catch (err) {
-        console.error('[ОШИБКА ОTПРАВКИ]', err);
-        res.json({ success: false, error: 'Не удалось отправить сообщение. Проверьте номер.' });
-    }
+            // Подтверждаем сайту успешную отправку
+            socket.emit('message_sent', {
+                success: true,
+                to: cleanPhone,
+                text: message,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+        } catch (err) {
+            console.error('[ОШИБКА ОTПРАВКИ]', err);
+            socket.emit('message_sent', { success: false, error: 'Не удалось отправить сообщение' });
+        }
+    });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Сервер запущен: http://localhost:${PORT}`);
+server.listen(PORT, () => {
+    console.log(`=== Веб-мессенджер запущен: http://localhost:${PORT} ===`);
 });
