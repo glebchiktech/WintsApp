@@ -3,135 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Direct Sender</title>
+    <title>WhatsApp Custom Client</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #000;
-            color: #fff;
-            font-family: 'Segoe UI', sans-serif;
-            padding: 20px;
-            max-width: 480px;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            padding: 15px;
+            max-width: 500px;
             margin: 0 auto;
         }
-        h1 { font-size: 24px; font-weight: 300; color: #00a4ef; text-transform: uppercase; margin-bottom: 20px; }
-        .card { background: #1f1f1f; padding: 16px; margin-bottom: 20px; border-left: 4px solid #00a4ef; }
-        label { display: block; font-size: 13px; color: #ccc; margin-bottom: 6px; }
+        h1 {
+            font-size: 22px;
+            font-weight: 300;
+            color: #00a4ef;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        .card {
+            background: #1f1f1f;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00a4ef;
+        }
         input, textarea {
-            width: 100%; background: #2b2b2b; border: 1px solid #3d3d3d; color: #fff;
-            padding: 12px; font-size: 15px; margin-bottom: 14px; outline: none;
+            width: 100%;
+            background: #2b2b2b;
+            border: 1px solid #3d3d3d;
+            color: #fff;
+            padding: 10px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            outline: none;
+            font-family: inherit;
         }
+        input:focus, textarea:focus { border-color: #00a4ef; }
         button {
-            width: 100%; background-color: #00a4ef; color: #fff; border: none;
-            padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; text-transform: uppercase;
-        }
-        button:disabled { background-color: #444; cursor: not-allowed; }
-        .status-box {
-            display: none;
+            width: 100%;
+            background-color: #00a4ef;
+            color: #fff;
+            border: none;
             padding: 12px;
-            margin-top: 15px;
             font-size: 14px;
             font-weight: 600;
-            text-align: center;
+            cursor: pointer;
+            text-transform: uppercase;
         }
-        .success { background: #1b5e20; color: #4caf50; border: 1px solid #4caf50; }
-        .error { background: #b71c1c; color: #ff5252; border: 1px solid #ff5252; }
-        .qr-container { text-align: center; display: none; }
-        .qr-container img { width: 220px; height: 220px; margin-top: 10px; background: #fff; padding: 10px; }
+        button:active { background-color: #0078d7; }
+        
+        /* ЧАТ ОКНО */
+        #chatBox {
+            height: 300px;
+            background: #111;
+            border: 1px solid #2b2b2b;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .msg {
+            max-width: 80%;
+            padding: 8px 12px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .msg-out {
+            align-self: flex-end;
+            background: #004e8c;
+            border-left: 3px solid #00a4ef;
+        }
+        .msg-in {
+            align-self: flex-start;
+            background: #2d2d2d;
+            border-left: 3px solid #25D366;
+        }
+        .msg-meta {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .status-badge {
+            font-size: 12px;
+            padding: 6px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .online { background: #1b5e20; color: #4caf50; }
+        .offline { background: #b71c1c; color: #ff5252; }
+        
+        .qr-screen { text-align: center; }
+        .qr-screen img { width: 200px; height: 200px; background: #fff; padding: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h1>WhatsApp Sender</h1>
+    <h1>WhatsApp Messenger</h1>
 
-    <!-- Экран подключения QR (если сервер не привязан) -->
-    <div id="qrScreen" class="card qr-container">
-        <div style="font-size: 14px; color: #aaa;">Сканируйте QR-код в WhatsApp на телефоне для привязки:</div>
+    <!-- Статус подключения -->
+    <div id="statusBadge" class="status-badge offline">Подключение к серверу...</div>
+
+    <!-- Экран QR-кода (показывается только при первой авторизации) -->
+    <div id="qrScreen" class="card qr-screen" style="display: none;">
+        <div style="font-size: 13px; color: #aaa;">Отсканируйте QR-код через WhatsApp:</div>
         <img id="qrImg" src="" alt="QR Code" />
     </div>
 
-    <!-- Форма отправки -->
-    <div id="sendScreen" class="card" style="display: none;">
-        <label for="phone">Номер получателя:</label>
-        <input type="tel" id="phone" placeholder="77071234567" />
+    <!-- Интерфейс отправки и получения -->
+    <div id="appScreen" style="display: none;">
+        <div class="card">
+            <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 4px;">Номер собеседника:</label>
+            <input type="tel" id="targetPhone" placeholder="77071234567" />
+        </div>
 
-        <label for="message">Текст сообщения:</label>
-        <textarea id="message" rows="4" placeholder="Введите текст..."></textarea>
+        <!-- Окно переписки -->
+        <div id="chatBox"></div>
 
-        <button id="sendBtn" onclick="sendDirect()">Отправить сообщение</button>
-
-        <!-- Сообщение об успешной отправке или ошибке -->
-        <div id="statusBox" class="status-box"></div>
+        <div class="card">
+            <textarea id="messageText" rows="3" placeholder="Введите сообщение..."></textarea>
+            <button onclick="sendMsg()">Отправить</button>
+        </div>
     </div>
 
     <script>
-        // Проверяем статус сервера каждые 3 секунды
-        async function checkStatus() {
-            try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
+        const socket = io();
 
-                if (data.isReady) {
-                    document.getElementById('qrScreen').style.display = 'none';
-                    document.getElementById('sendScreen').style.display = 'block';
-                } else if (data.qr) {
-                    document.getElementById('qrScreen').style.display = 'block';
-                    document.getElementById('sendScreen').style.display = 'none';
-                    document.getElementById('qrImg').src = data.qr;
-                }
-            } catch (e) {
-                console.log('Сервер недоступен...');
+        const statusBadge = document.getElementById('statusBadge');
+        const qrScreen = document.getElementById('qrScreen');
+        const appScreen = document.getElementById('appScreen');
+        const qrImg = document.getElementById('qrImg');
+        const chatBox = document.getElementById('chatBox');
+
+        // Получение QR-кода
+        socket.on('qr', (url) => {
+            qrImg.src = url;
+            qrScreen.style.display = 'block';
+            appScreen.style.display = 'none';
+            statusBadge.textContent = 'Ожидание сканирования QR...';
+            statusBadge.className = 'status-badge offline';
+        });
+
+        // WhatsApp готов к работе
+        socket.on('ready', () => {
+            qrScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+            statusBadge.textContent = '● Система готова к работе';
+            statusBadge.className = 'status-badge online';
+        });
+
+        socket.on('status', (data) => {
+            if (data.isReady) {
+                qrScreen.style.display = 'none';
+                appScreen.style.display = 'block';
+                statusBadge.textContent = '● Система готова к работе';
+                statusBadge.className = 'status-badge online';
             }
-        }
+        });
 
-        setInterval(checkStatus, 3000);
-        checkStatus();
-
-        // Фоновая отправка сообщения
-        async function sendDirect() {
-            const phone = document.getElementById('phone').value.trim();
-            const message = document.getElementById('message').value.trim();
-            const statusBox = document.getElementById('statusBox');
-            const sendBtn = document.getElementById('sendBtn');
+        // Отправка сообщения
+        function sendMsg() {
+            const phone = document.getElementById('targetPhone').value.trim();
+            const message = document.getElementById('messageText').value.trim();
 
             if (!phone || !message) {
-                showStatus('Заполните все поля!', false);
+                alert('Заполните номер и текст!');
                 return;
             }
 
-            // Блокируем кнопку на время отправки
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Отправка...';
-            statusBox.style.display = 'none';
-
-            try {
-                const res = await fetch('/api/send-direct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, message })
-                });
-
-                const data = await res.json();
-
-                if (data.success) {
-                    showStatus('✔ Успешно отправлено!', true);
-                    document.getElementById('message').value = ''; // очищаем поле ввода
-                } else {
-                    showStatus('✖ Ошибка: ' + data.error, false);
-                }
-            } catch (e) {
-                showStatus('✖ Не удалось связаться с сервером', false);
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Отправить сообщение';
-            }
+            socket.emit('send_message', { phone, message });
+            document.getElementById('messageText').value = '';
         }
 
-        function showStatus(text, isSuccess) {
-            const statusBox = document.getElementById('statusBox');
-            statusBox.textContent = text;
-            statusBox.className = 'status-box ' + (isSuccess ? 'success' : 'error');
-            statusBox.style.display = 'block';
+        // Подтверждение отправки (выводим в чат справа)
+        socket.on('message_sent', (res) => {
+            if (res.success) {
+                appendMessage(res.text, res.time, 'out', 'Вы');
+            } else {
+                alert('Ошибка: ' + res.error);
+            }
+        });
+
+        // ВХОДЯЩЕЕ СООБЩЕНИЕ (выводим в чат слева)
+        socket.on('incoming_message', (data) => {
+            appendMessage(data.text, data.time, 'in', data.senderName);
+        });
+
+        // Добавление сообщения на экран
+        function appendMessage(text, time, type, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg msg-${type}`;
+            msgDiv.innerHTML = `
+                <div style="font-size: 11px; color: #00a4ef; font-weight: 600;">${sender}</div>
+                <div>${text}</div>
+                <div class="msg-meta">${time}</div>
+            `;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Прокрутка вниз
         }
     </script>
 </body>
