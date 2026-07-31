@@ -4,42 +4,72 @@ const app = express();
 app.use(express.static('public'));
 app.use(express.json());
 
-// API для обработки номера и создания ссылок
-app.post('/api/send', (req, res) => {
-    const { phone, message } = req.body;
+// Простая база данных активных пользователей (в памяти сервера)
+const activeUsers = new Map();
 
-    if (!phone) {
-        return res.status(400).json({ success: false, error: 'Введите номер телефона' });
+// 1. Авторизация / Вход по своему номеру
+app.post('/api/login', (req, res) => {
+    const { myPhone } = req.body;
+
+    if (!myPhone) {
+        return res.status(400).json({ success: false, error: 'Введите ваш номер' });
     }
 
-    // Очищаем номер от плюсов, скобок и пробелов
-    let cleanPhone = phone.replace(/\D/g, '');
-
-    // Если номер начинается с 8 (для Казахстана/России), меняем на 7
+    let cleanPhone = myPhone.replace(/\D/g, '');
     if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
         cleanPhone = '7' + cleanPhone.slice(1);
     }
 
-    // Закодируем текст сообщения для URL (чтобы пробелы и спецсимволы не ломали ссылку)
-    const encodedMessage = encodeURIComponent(message || '');
+    // Запоминаем пользователя в базе
+    activeUsers.set(cleanPhone, {
+        loginTime: new Date(),
+        status: 'active'
+    });
 
-    // 1. Прямая универсальная ссылка (работает везде: телефон, ПК, планшет)
-    const waDirectUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-
-    // 2. Ссылка конкретно для веб-версии WhatsApp Web на ПК
-    const waWebUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
-
-    console.log(`[ССЫЛКА СГЕНЕРИРОВАНА] Номер: ${cleanPhone}`);
+    console.log(`[БАЗА] Пользователь авторизован: +${cleanPhone}`);
 
     res.json({
         success: true,
-        phone: cleanPhone,
-        waDirectUrl,
-        waWebUrl
+        user: {
+            phone: cleanPhone
+        }
+    });
+});
+
+// 2. Отправка сообщения получателю
+app.post('/api/send-message', (req, res) => {
+    const { senderPhone, recipientPhone, message } = req.body;
+
+    let cleanSender = senderPhone ? senderPhone.replace(/\D/g, '') : '';
+    let cleanRecipient = recipientPhone ? recipientPhone.replace(/\D/g, '') : '';
+
+    if (cleanSender.length === 11 && cleanSender.startsWith('8')) cleanSender = '7' + cleanSender.slice(1);
+    if (cleanRecipient.length === 11 && cleanRecipient.startsWith('8')) cleanRecipient = '7' + cleanRecipient.slice(1);
+
+    // Проверяем, есть ли отправитель в нашей базе
+    if (!activeUsers.has(cleanSender)) {
+        return res.status(403).json({ success: false, error: 'Сессия не найдена. Войдите снова.' });
+    }
+
+    if (!cleanRecipient) {
+        return res.status(400).json({ success: false, error: 'Укажите номер получателя' });
+    }
+
+    const encodedMsg = encodeURIComponent(message || '');
+    
+    // Формируем прямую ссылку пересылки
+    const waUrl = `https://wa.me/${cleanRecipient}?text=${encodedMsg}`;
+
+    console.log(`[ОТПРАВКА] От: +${cleanSender} -> Кому: +${cleanRecipient}`);
+
+    res.json({
+        success: true,
+        recipient: cleanRecipient,
+        waUrl: waUrl
     });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
+    console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
