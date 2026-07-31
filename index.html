@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Redirect — W10M</title>
+    <title>WhatsApp Messenger — W10M</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,11 +19,12 @@
             margin: 0 auto;
         }
         h1 {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 300;
             color: #00a4ef;
             text-transform: uppercase;
             margin-bottom: 20px;
+            letter-spacing: 1px;
         }
         .card {
             background-color: #1f1f1f;
@@ -32,10 +33,11 @@
             border-left: 4px solid #00a4ef;
         }
         .section-title {
-            font-size: 13px;
+            font-size: 12px;
             color: #888;
             text-transform: uppercase;
             margin-bottom: 10px;
+            letter-spacing: 0.5px;
         }
         input, textarea {
             width: 100%;
@@ -44,15 +46,14 @@
             color: #fff;
             padding: 10px;
             font-size: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             outline: none;
             font-family: inherit;
         }
         input:focus, textarea:focus {
             border-color: #00a4ef;
         }
-        .btn {
-            display: block;
+        button {
             width: 100%;
             background-color: #00a4ef;
             color: #ffffff;
@@ -62,90 +63,161 @@
             font-weight: 600;
             cursor: pointer;
             text-transform: uppercase;
-            text-align: center;
-            text-decoration: none;
-            margin-top: 5px;
         }
-        .btn-secondary {
-            background-color: #25D366; /* Зеленый цвет WhatsApp */
-            margin-top: 10px;
+        button:active {
+            background-color: #0078d7;
         }
-        .btn:active {
-            opacity: 0.8;
+        .user-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #112233;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-left: 3px solid #00a4ef;
         }
-        #resultArea {
-            display: none;
-            margin-top: 15px;
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #ff4444;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+            text-transform: uppercase;
         }
-        #status {
+        .error-msg {
+            color: #ff4444;
             font-size: 13px;
             margin-top: 8px;
-            color: #ff4444;
         }
     </style>
 </head>
 <body>
 
-    <h1>WhatsApp Web Direct</h1>
+    <h1>WhatsApp Web</h1>
 
-    <div class="card">
-        <div class="section-title">Отправка на номер</div>
-        <input type="text" id="phone" placeholder="Номер (например: 77071234567 или 8707...)" />
-        <textarea id="message" rows="3" placeholder="Введите текст сообщения (необязательно)..."></textarea>
+    <!-- ЭКРАН 1: ВХОД ПО СВОЕМУ НОМЕРУ -->
+    <div id="loginScreen" class="card">
+        <div class="section-title">Авторизация в системе</div>
+        <p style="color: #aaa; font-size: 13px; margin-bottom: 12px;">Введите ваш номер WhatsApp для входа в профиль:</p>
+        <input type="text" id="myPhoneInput" placeholder="Ваш номер (например: 77071234567)" />
+        <button onclick="login()">Войти (ОК)</button>
+        <div id="loginError" class="error-msg"></div>
+    </div>
+
+    <!-- ЭКРАН 2: ОТПРАВКА СООБЩЕНИЙ (скрыт по умолчанию) -->
+    <div id="appScreen" style="display: none;">
         
-        <button class="btn" onclick="generateLink()">Открыть чат</button>
-        <div id="status"></div>
+        <!-- Профиль текущего пользователя -->
+        <div class="user-badge">
+            <div>
+                <span style="font-size: 11px; color: #888; display: block;">АКТИВНЫЙ ПРОФИЛЬ</span>
+                <span id="displayMyPhone" style="font-weight: 600;">+70000000000</span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Сменить</button>
+        </div>
 
-        <!-- Секция с полученными ссылками -->
-        <div id="resultArea">
-            <div class="section-title" style="margin-top: 15px;">Выберите вариант:</div>
+        <!-- Форма для сообщения -->
+        <div class="card">
+            <div class="section-title">Новое сообщение</div>
             
-            <!-- Прямой переход по wa.me (работает везде) -->
-            <a id="waDirectBtn" href="#" target="_blank" class="btn btn-secondary">Открыть в WhatsApp (Мобильный / Приложение)</a>
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px; display: block;">Номер получателя:</label>
+            <input type="text" id="recipientPhoneInput" placeholder="7707xxxxxxx" />
+
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px; display: block;">Текст сообщения:</label>
+            <textarea id="messageInput" rows="4" placeholder="Введите текст..."></textarea>
             
-            <!-- Переход на web.whatsapp.com (для ПК) -->
-            <a id="waWebBtn" href="#" target="_blank" class="btn" style="background:#333; margin-top:8px;">Открыть WhatsApp Web (Браузер)</a>
+            <button onclick="sendToRecipient()">Отправить сообщение</button>
+            <div id="sendError" class="error-msg"></div>
         </div>
     </div>
 
     <script>
-        async function generateLink() {
-            const phone = document.getElementById('phone').value.trim();
-            const message = document.getElementById('message').value.trim();
-            const statusDiv = document.getElementById('status');
-            const resultArea = document.getElementById('resultArea');
+        // Проверяем, есть ли уже сохранённый номер в браузерной памяти
+        window.onload = function() {
+            const savedPhone = localStorage.getItem('wa_my_phone');
+            if (savedPhone) {
+                autoLogin(savedPhone);
+            }
+        };
 
-            if (!phone) {
-                statusDiv.textContent = 'Укажите номер телефона!';
-                resultArea.style.display = 'none';
+        // Вход пользователя
+        async function login() {
+            const myPhone = document.getElementById('myPhoneInput').value.trim();
+            const errorDiv = document.getElementById('loginError');
+
+            if (!myPhone) {
+                errorDiv.textContent = 'Введите номер телефона!';
                 return;
             }
 
-            statusDiv.textContent = '';
-
             try {
-                const response = await fetch('/api/send', {
+                const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, message })
+                    body: JSON.stringify({ myPhone })
                 });
-
-                const data = await response.json();
+                const data = await res.json();
 
                 if (data.success) {
-                    // Устанавливаем ссылки на кнопки
-                    document.getElementById('waDirectBtn').href = data.waDirectUrl;
-                    document.getElementById('waWebBtn').href = data.waWebUrl;
-                    
-                    resultArea.style.display = 'block';
-
-                    // Автоматическое перенаправление на прямую ссылку
-                    window.open(data.waDirectUrl, '_blank');
+                    localStorage.setItem('wa_my_phone', data.user.phone);
+                    showAppScreen(data.user.phone);
                 } else {
-                    statusDiv.textContent = data.error || 'Ошибка';
+                    errorDiv.textContent = data.error || 'Ошибка входа';
                 }
             } catch (e) {
-                statusDiv.textContent = 'Ошибка соединения с сервером';
+                errorDiv.textContent = 'Ошибка подключения к серверу';
+            }
+        }
+
+        async function autoLogin(phone) {
+            document.getElementById('myPhoneInput').value = phone;
+            await login();
+        }
+
+        function showAppScreen(phone) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appScreen').style.display = 'block';
+            document.getElementById('displayMyPhone').textContent = '+' + phone;
+        }
+
+        function logout() {
+            localStorage.removeItem('wa_my_phone');
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('appScreen').style.display = 'none';
+            document.getElementById('myPhoneInput').value = '';
+        }
+
+        // Отправка получателю
+        async function sendToRecipient() {
+            const senderPhone = localStorage.getItem('wa_my_phone');
+            const recipientPhone = document.getElementById('recipientPhoneInput').value.trim();
+            const message = document.getElementById('messageInput').value.trim();
+            const errorDiv = document.getElementById('sendError');
+
+            if (!recipientPhone) {
+                errorDiv.textContent = 'Укажите номер получателя!';
+                return;
+            }
+
+            errorDiv.textContent = '';
+
+            try {
+                const res = await fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senderPhone, recipientPhone, message })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Открываем диалог с переданным текстом
+                    window.open(data.waUrl, '_blank');
+                } else {
+                    errorDiv.textContent = data.error || 'Ошибка при отправке';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Не удалось связаться с сервером';
             }
         }
     </script>
