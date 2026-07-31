@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp — Windows 10 Mobile</title>
+    <title>WhatsApp Redirect — W10M</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,25 +19,23 @@
             margin: 0 auto;
         }
         h1 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 300;
             color: #00a4ef;
             text-transform: uppercase;
-            letter-spacing: 1px;
             margin-bottom: 20px;
         }
-        .section-title {
-            font-size: 14px;
-            color: #888888;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
-        }
-        .send-box {
+        .card {
             background-color: #1f1f1f;
             padding: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             border-left: 4px solid #00a4ef;
+        }
+        .section-title {
+            font-size: 13px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 10px;
         }
         input, textarea {
             width: 100%;
@@ -46,95 +44,84 @@
             color: #fff;
             padding: 10px;
             font-size: 15px;
-            font-family: inherit;
             margin-bottom: 10px;
             outline: none;
+            font-family: inherit;
         }
         input:focus, textarea:focus {
             border-color: #00a4ef;
         }
-        button {
+        .btn {
+            display: block;
             width: 100%;
             background-color: #00a4ef;
             color: #ffffff;
             border: none;
             padding: 12px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             text-transform: uppercase;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 5px;
         }
-        button:active {
-            background-color: #0078d7;
+        .btn-secondary {
+            background-color: #25D366; /* Зеленый цвет WhatsApp */
+            margin-top: 10px;
         }
-        .chat-history {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .btn:active {
+            opacity: 0.8;
         }
-        .message-item {
-            background: #1a1a1a;
-            padding: 12px;
-            border-left: 3px solid #555;
-        }
-        .message-item.outgoing {
-            border-left-color: #00a4ef;
-            background: #112233;
-        }
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-        .message-body {
-            font-size: 15px;
-            word-wrap: break-word;
+        #resultArea {
+            display: none;
+            margin-top: 15px;
         }
         #status {
             font-size: 13px;
             margin-top: 8px;
             color: #ff4444;
         }
-        #status.success {
-            color: #00cc66;
-        }
     </style>
 </head>
 <body>
 
-    <h1>WhatsApp</h1>
+    <h1>WhatsApp Web Direct</h1>
 
-    <div class="send-box">
-        <div class="section-title">Новое сообщение</div>
-        <input type="text" id="phone" placeholder="Номер (например: 77071234567)" />
-        <textarea id="message" rows="3" placeholder="Введите текст сообщения..."></textarea>
-        <button onclick="sendMessage()">Отправить</button>
+    <div class="card">
+        <div class="section-title">Отправка на номер</div>
+        <input type="text" id="phone" placeholder="Номер (например: 77071234567 или 8707...)" />
+        <textarea id="message" rows="3" placeholder="Введите текст сообщения (необязательно)..."></textarea>
+        
+        <button class="btn" onclick="generateLink()">Открыть чат</button>
         <div id="status"></div>
+
+        <!-- Секция с полученными ссылками -->
+        <div id="resultArea">
+            <div class="section-title" style="margin-top: 15px;">Выберите вариант:</div>
+            
+            <!-- Прямой переход по wa.me (работает везде) -->
+            <a id="waDirectBtn" href="#" target="_blank" class="btn btn-secondary">Открыть в WhatsApp (Мобильный / Приложение)</a>
+            
+            <!-- Переход на web.whatsapp.com (для ПК) -->
+            <a id="waWebBtn" href="#" target="_blank" class="btn" style="background:#333; margin-top:8px;">Открыть WhatsApp Web (Браузер)</a>
+        </div>
     </div>
 
-    <div class="section-title">История сообщений</div>
-    <div class="chat-history" id="chatHistory">
-        <!-- Сообщения будут появляться здесь -->
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const chatHistory = document.getElementById('chatHistory');
-        const statusDiv = document.getElementById('status');
-
-        async function sendMessage() {
+        async function generateLink() {
             const phone = document.getElementById('phone').value.trim();
             const message = document.getElementById('message').value.trim();
+            const statusDiv = document.getElementById('status');
+            const resultArea = document.getElementById('resultArea');
 
-            if (!phone || !message) {
-                showStatus('Заполните номер и текст сообщения', false);
+            if (!phone) {
+                statusDiv.textContent = 'Укажите номер телефона!';
+                resultArea.style.display = 'none';
                 return;
             }
 
-            showStatus('Отправка...', true);
+            statusDiv.textContent = '';
 
             try {
                 const response = await fetch('/api/send', {
@@ -146,42 +133,21 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus('Сообщение отправлено!', true);
+                    // Устанавливаем ссылки на кнопки
+                    document.getElementById('waDirectBtn').href = data.waDirectUrl;
+                    document.getElementById('waWebBtn').href = data.waWebUrl;
                     
-                    // Добавляем отправленное сообщение в ленту
-                    addMessageToUI('Вы (' + phone + ')', message, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), true);
-                    
-                    document.getElementById('message').value = '';
+                    resultArea.style.display = 'block';
+
+                    // Автоматическое перенаправление на прямую ссылку
+                    window.open(data.waDirectUrl, '_blank');
                 } else {
-                    showStatus(data.error || 'Ошибка отправки', false);
+                    statusDiv.textContent = data.error || 'Ошибка';
                 }
-            } catch (err) {
-                showStatus('Ошибка сети или сервера', false);
+            } catch (e) {
+                statusDiv.textContent = 'Ошибка соединения с сервером';
             }
         }
-
-        function showStatus(text, isSuccess) {
-            statusDiv.textContent = text;
-            statusDiv.className = isSuccess ? 'success' : '';
-        }
-
-        function addMessageToUI(from, text, time, isOutgoing = false) {
-            const item = document.createElement('div');
-            item.className = 'message-item' + (isOutgoing ? ' outgoing' : '');
-            item.innerHTML = `
-                <div class="message-header">
-                    <span>${from}</span>
-                    <span>${time}</span>
-                </div>
-                <div class="message-body">${text}</div>
-            `;
-            chatHistory.prepend(item);
-        }
-
-        // Прием входящих сообщений в реальном времени
-        socket.on('new_message', (data) => {
-            addMessageToUI(data.from, data.body, data.time, false);
-        });
     </script>
 </body>
 </html>
