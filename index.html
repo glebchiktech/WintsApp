@@ -3,223 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Direct — Metro UI</title>
+    <title>WhatsApp Direct Sender</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
             padding: 20px;
             max-width: 480px;
             margin: 0 auto;
         }
-        h1 {
-            font-size: 26px;
-            font-weight: 300;
-            color: #00a4ef;
-            text-transform: uppercase;
-            margin-bottom: 25px;
-            letter-spacing: 1px;
-        }
-        .card {
-            background-color: #1f1f1f;
-            padding: 16px;
-            margin-bottom: 20px;
-            border-left: 4px solid #00a4ef;
-        }
-        .section-title {
-            font-size: 12px;
-            color: #888888;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-        label {
-            display: block;
-            font-size: 13px;
-            color: #cccccc;
-            margin-bottom: 6px;
-        }
+        h1 { font-size: 24px; font-weight: 300; color: #00a4ef; text-transform: uppercase; margin-bottom: 20px; }
+        .card { background: #1f1f1f; padding: 16px; margin-bottom: 20px; border-left: 4px solid #00a4ef; }
+        label { display: block; font-size: 13px; color: #ccc; margin-bottom: 6px; }
         input, textarea {
-            width: 100%;
-            background: #2b2b2b;
-            border: 1px solid #3d3d3d;
-            color: #ffffff;
-            padding: 12px;
-            font-size: 15px;
-            margin-bottom: 14px;
-            outline: none;
-            font-family: inherit;
-        }
-        input:focus, textarea:focus {
-            border-color: #00a4ef;
+            width: 100%; background: #2b2b2b; border: 1px solid #3d3d3d; color: #fff;
+            padding: 12px; font-size: 15px; margin-bottom: 14px; outline: none;
         }
         button {
-            width: 100%;
-            background-color: #00a4ef;
-            color: #ffffff;
-            border: none;
-            padding: 14px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            width: 100%; background-color: #00a4ef; color: #fff; border: none;
+            padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; text-transform: uppercase;
         }
-        button:active {
-            background-color: #0078d7;
-        }
-        .user-badge {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #112233;
+        button:disabled { background-color: #444; cursor: not-allowed; }
+        .status-box {
+            display: none;
             padding: 12px;
-            margin-bottom: 20px;
-            border-left: 4px solid #25D366;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
         }
-        .logout-btn {
-            background: none;
-            border: none;
-            color: #ff4444;
-            font-size: 12px;
-            cursor: pointer;
-            width: auto;
-            padding: 0;
-        }
-        .error-msg {
-            color: #ff4444;
-            font-size: 13px;
-            margin-top: 8px;
-        }
+        .success { background: #1b5e20; color: #4caf50; border: 1px solid #4caf50; }
+        .error { background: #b71c1c; color: #ff5252; border: 1px solid #ff5252; }
+        .qr-container { text-align: center; display: none; }
+        .qr-container img { width: 220px; height: 220px; margin-top: 10px; background: #fff; padding: 10px; }
     </style>
 </head>
 <body>
 
     <h1>WhatsApp Sender</h1>
 
-    <!-- ШАГ 1: ВВОД СВОЕГО НОМЕРА -->
-    <div id="loginStep" class="card">
-        <div class="section-title">Шаг 1: Авторизация профиля</div>
-        <label for="myPhone">Введите ваш номер WhatsApp:</label>
-        <input type="tel" id="myPhone" placeholder="77071234567" />
-        <button onclick="saveMyPhone()">ОК</button>
-        <div id="loginError" class="error-msg"></div>
+    <!-- Экран подключения QR (если сервер не привязан) -->
+    <div id="qrScreen" class="card qr-container">
+        <div style="font-size: 14px; color: #aaa;">Сканируйте QR-код в WhatsApp на телефоне для привязки:</div>
+        <img id="qrImg" src="" alt="QR Code" />
     </div>
 
-    <!-- ШАГ 2: ВВОД НОМЕРА ПОЛУЧАТЕЛЯ И СООБЩЕНИЯ (Изначально скрыт) -->
-    <div id="sendStep" style="display: none;">
-        
-        <!-- Шапка с твоим номером -->
-        <div class="user-badge">
-            <div>
-                <span style="font-size: 11px; color: #aaa; display: block;">ВАШ ПРОФИЛЬ:</span>
-                <span id="displayMyPhone" style="font-weight: 600;">+70000000000</span>
-            </div>
-            <button class="logout-btn" onclick="resetMyPhone()">Сменить номер</button>
-        </div>
+    <!-- Форма отправки -->
+    <div id="sendScreen" class="card" style="display: none;">
+        <label for="phone">Номер получателя:</label>
+        <input type="tel" id="phone" placeholder="77071234567" />
 
-        <div class="card">
-            <div class="section-title">Шаг 2: Отправка сообщения</div>
-            
-            <label for="targetPhone">Номер получателя:</label>
-            <input type="tel" id="targetPhone" placeholder="7707xxxxxxx" />
+        <label for="message">Текст сообщения:</label>
+        <textarea id="message" rows="4" placeholder="Введите текст..."></textarea>
 
-            <label for="messageText">Текст сообщения:</label>
-            <textarea id="messageText" rows="4" placeholder="Напишите текст..."></textarea>
-            
-            <button onclick="sendMessage()">Отправить сообщение</button>
-            <div id="sendError" class="error-msg"></div>
-        </div>
+        <button id="sendBtn" onclick="sendDirect()">Отправить сообщение</button>
+
+        <!-- Сообщение об успешной отправке или ошибке -->
+        <div id="statusBox" class="status-box"></div>
     </div>
 
     <script>
-        // Функция нормализации номера (убирает плюсы, пробелы, меняет 8 на 7)
-        function formatPhone(phone) {
-            let clean = phone.replace(/\D/g, '');
-            if (clean.length === 11 && clean.startsWith('8')) {
-                clean = '7' + clean.slice(1);
+        // Проверяем статус сервера каждые 3 секунды
+        async function checkStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                if (data.isReady) {
+                    document.getElementById('qrScreen').style.display = 'none';
+                    document.getElementById('sendScreen').style.display = 'block';
+                } else if (data.qr) {
+                    document.getElementById('qrScreen').style.display = 'block';
+                    document.getElementById('sendScreen').style.display = 'none';
+                    document.getElementById('qrImg').src = data.qr;
+                }
+            } catch (e) {
+                console.log('Сервер недоступен...');
             }
-            return clean;
         }
 
-        // Автоматическая проверка при загрузке страницы
-        window.onload = function() {
-            const savedNumber = localStorage.getItem('my_wa_phone');
-            if (savedNumber) {
-                showSendScreen(savedNumber);
-            }
-        };
+        setInterval(checkStatus, 3000);
+        checkStatus();
 
-        // Сохранение своего номера (Шаг 1)
-        function saveMyPhone() {
-            const input = document.getElementById('myPhone').value.trim();
-            const errorDiv = document.getElementById('loginError');
+        // Фоновая отправка сообщения
+        async function sendDirect() {
+            const phone = document.getElementById('phone').value.trim();
+            const message = document.getElementById('message').value.trim();
+            const statusBox = document.getElementById('statusBox');
+            const sendBtn = document.getElementById('sendBtn');
 
-            if (!input) {
-                errorDiv.textContent = 'Пожалуйста, введите ваш номер!';
+            if (!phone || !message) {
+                showStatus('Заполните все поля!', false);
                 return;
             }
 
-            const cleanPhone = formatPhone(input);
-            if (cleanPhone.length < 10) {
-                errorDiv.textContent = 'Введите корректный номер телефона!';
-                return;
-            }
+            // Блокируем кнопку на время отправки
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Отправка...';
+            statusBox.style.display = 'none';
 
-            // Сохраняем в памяти браузера
-            localStorage.setItem('my_wa_phone', cleanPhone);
-            errorDiv.textContent = '';
-            showSendScreen(cleanPhone);
+            try {
+                const res = await fetch('/api/send-direct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, message })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    showStatus('✔ Успешно отправлено!', true);
+                    document.getElementById('message').value = ''; // очищаем поле ввода
+                } else {
+                    showStatus('✖ Ошибка: ' + data.error, false);
+                }
+            } catch (e) {
+                showStatus('✖ Не удалось связаться с сервером', false);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Отправить сообщение';
+            }
         }
 
-        // Переключение на экран отправки (Шаг 2)
-        function showSendScreen(phone) {
-            document.getElementById('loginStep').style.display = 'none';
-            document.getElementById('sendStep').style.display = 'block';
-            document.getElementById('displayMyPhone').textContent = '+' + phone;
-        }
-
-        // Сброс сохраненного номера
-        function resetMyPhone() {
-            localStorage.removeItem('my_wa_phone');
-            document.getElementById('loginStep').style.display = 'block';
-            document.getElementById('sendStep').style.display = 'none';
-            document.getElementById('myPhone').value = '';
-        }
-
-        // Отправка сообщения получателю
-        function sendMessage() {
-            const targetInput = document.getElementById('targetPhone').value.trim();
-            const message = document.getElementById('messageText').value.trim();
-            const errorDiv = document.getElementById('sendError');
-
-            if (!targetInput) {
-                errorDiv.textContent = 'Введите номер получателя!';
-                return;
-            }
-
-            const cleanTarget = formatPhone(targetInput);
-            if (cleanTarget.length < 10) {
-                errorDiv.textContent = 'Некорректный номер получателя!';
-                return;
-            }
-
-            errorDiv.textContent = '';
-
-            // Кодируем текст для ссылки
-            const encodedText = encodeURIComponent(message);
-            
-            // Формируем прямую ссылку переадресации
-            const waUrl = `https://wa.me/${cleanTarget}?text=${encodedText}`;
-
-            // Переходим прямо в WhatsApp
-            window.location.href = waUrl;
+        function showStatus(text, isSuccess) {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.textContent = text;
+            statusBox.className = 'status-box ' + (isSuccess ? 'success' : 'error');
+            statusBox.style.display = 'block';
         }
     </script>
 </body>
