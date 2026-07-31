@@ -1,73 +1,45 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-// Отдаем статические файлы из папки public
 app.use(express.static('public'));
 app.use(express.json());
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+// API для обработки номера и создания ссылок
+app.post('/api/send', (req, res) => {
+    const { phone, message } = req.body;
+
+    if (!phone) {
+        return res.status(400).json({ success: false, error: 'Введите номер телефона' });
     }
-});
 
-// Вывод QR-кода в терминал
-client.on('qr', (qr) => {
-    console.log('\n--- ОТСКАНТИРУЙТЕ QR-КОД В WHATSAPP ---');
-    qrcode.generate(qr, { small: true });
-});
+    // Очищаем номер от плюсов, скобок и пробелов
+    let cleanPhone = phone.replace(/\D/g, '');
 
-client.on('ready', () => {
-    console.log('\n[УСПЕХ] WhatsApp успешно подключен и готов к работе!');
-});
+    // Если номер начинается с 8 (для Казахстана/России), меняем на 7
+    if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
+        cleanPhone = '7' + cleanPhone.slice(1);
+    }
 
-// Обработка входящих сообщений
-client.on('message', async (msg) => {
-    const chat = await msg.getChat();
-    io.emit('new_message', {
-        from: chat.name || msg.from,
-        body: msg.body,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: 'incoming'
+    // Закодируем текст сообщения для URL (чтобы пробелы и спецсимволы не ломали ссылку)
+    const encodedMessage = encodeURIComponent(message || '');
+
+    // 1. Прямая универсальная ссылка (работает везде: телефон, ПК, планшет)
+    const waDirectUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+
+    // 2. Ссылка конкретно для веб-версии WhatsApp Web на ПК
+    const waWebUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+
+    console.log(`[ССЫЛКА СГЕНЕРИРОВАНА] Номер: ${cleanPhone}`);
+
+    res.json({
+        success: true,
+        phone: cleanPhone,
+        waDirectUrl,
+        waWebUrl
     });
 });
 
-// API-эндпоинт для отправки сообщений
-app.post('/api/send', async (req, res) => {
-    const { phone, message } = req.body;
-
-    if (!phone || !message) {
-        return res.status(400).json({ success: false, error: 'Заполните номер и сообщение' });
-    }
-
-    try {
-        // Очищаем номер от плюсов, пробелов и тире
-        let cleanPhone = phone.replace(/\D/g, '');
-
-        // Преобразуем формат номера в chatId для WhatsApp
-        const chatId = `${cleanPhone}@c.us`;
-
-        // Отправляем сообщение
-        await client.sendMessage(chatId, message);
-
-        console.log(`[ОТПРАВЛЕНО] Кому: ${cleanPhone} | Текст: ${message}`);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('[ОШИБКА ОТПРАВКИ]:', error);
-        res.status(500).json({ success: false, error: 'Не удалось отправить сообщение' });
-    }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
-
-server.listen(3000, () => {
-    console.log('Сервер запущен! Откройте http://localhost:3000 в браузере');
-});
-
-client.initialize();
