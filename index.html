@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WP Telegram Light</title>
+  
+  <!-- Библиотека для генерации QR-кода -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -42,7 +46,7 @@
     }
 
     .title {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 300;
       margin-bottom: 8px;
     }
@@ -53,6 +57,15 @@
       margin-bottom: 20px;
       max-width: 280px;
       line-height: 1.4;
+    }
+
+    /* Стилизация контейнера QR-кода */
+    #qrcode-container {
+      background: #ffffff;
+      padding: 12px;
+      border: 3px solid #0078d7;
+      margin-bottom: 15px;
+      display: inline-block;
     }
 
     input[type="text"], input[type="number"] {
@@ -66,7 +79,6 @@
       margin-bottom: 15px;
       outline: none;
       letter-spacing: 1px;
-      border-radius: 0;
     }
 
     input:focus {
@@ -83,21 +95,24 @@
       font-weight: bold;
       font-size: 14px;
       cursor: pointer;
+      margin-bottom: 15px;
     }
 
     .btn:active {
       background: #005a9e;
     }
 
+    .switch-link {
+      color: #0078d7;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
     #app-screen {
       display: none;
       flex: 1;
       padding: 20px;
-    }
-
-    .chat-item {
-      padding: 12px;
-      border-bottom: 1px solid #222;
     }
   </style>
 </head>
@@ -107,48 +122,82 @@
 
   <div id="auth-screen">
     
-    <!-- Шаг 1: Номер телефона -->
-    <div id="step-phone">
-      <div class="title">Вход в Telegram</div>
-      <div class="subtitle">Введите ваш номер телефона для получения кода</div>
-      
-      <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__" maxlength="18">
-      <button class="btn" id="send-code-btn" onclick="requestTelegramCode()">Получить код</button>
+    <!-- 1. ВХОД ПО QR-КОДУ (ПО УМОЛЧАНИЮ) -->
+    <div id="step-qr">
+      <div class="title">Вход по QR-коду</div>
+      <div class="subtitle">
+        Открой Telegram на смартфоне → Настройки → Устройства → Подключить устройство
+      </div>
+
+      <div id="qrcode-container">
+        <div id="qrcode"></div>
+      </div>
+
+      <br>
+      <span class="switch-link" onclick="showPhoneAuth()">Войти по номеру телефона</span>
     </div>
 
-    <!-- Шаг 2: Ввод кода -->
+    <!-- 2. ВХОД ПО НОМЕРУ ТЕЛЕФОНА -->
+    <div id="step-phone" style="display: none;">
+      <div class="title">Вход по номеру</div>
+      <div class="subtitle">Введите номер для получения кода в Telegram</div>
+      
+      <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__" maxlength="18">
+      <button class="btn" onclick="requestTelegramCode()">Получить код</button>
+
+      <br>
+      <span class="switch-link" onclick="showQRAuth()">Войти по QR-коду</span>
+    </div>
+
+    <!-- 3. ВВОД КОДА ИЗ СМС/ТЕЛЕГРАМ -->
     <div id="step-code" style="display: none;">
       <div class="title">Проверка кода</div>
-      <div class="subtitle" id="code-sent-to">Мы отправили код в приложение Telegram</div>
+      <div class="subtitle" id="code-sent-to">Код отправлен в ваше приложение Telegram</div>
       
       <input type="number" id="code-input" placeholder="Код подтверждения" maxlength="5">
-      <button class="btn" id="login-btn" onclick="submitTelegramCode()">Войти</button>
+      <button class="btn" onclick="submitTelegramCode()">Войти</button>
     </div>
 
   </div>
 
-  <!-- Главный экран после входа -->
+  <!-- Экран чатов (после успешного входа) -->
   <div id="app-screen">
-    <h2 style="color: #0078d7;">Чаты</h2>
-    <div class="chat-item" style="margin-top: 15px;">
-      <div style="font-weight: bold;">Избранное</div>
-      <div style="font-size: 12px; color: #888;">Вы успешно авторизовались через Telegram API!</div>
-    </div>
+    <h2 style="color: #0078d7;">Добро пожаловать!</h2>
+    <p style="margin-top: 10px; color: #ccc;">Вы успешно авторизовались в Telegram.</p>
   </div>
 
   <script>
-    // ⚙️ НАСТРОЙКА: Если открываешь со смартфона, укажи IP компьютера вместо localhost (например: "192.168.1.15")
-    const SERVER_IP = "localhost"; 
-    const API_URL = `http://${SERVER_IP}:3000/api`;
+    // Генерация официального формата ссылки авторизации Telegram
+    let loginToken = "tg://login?token=" + Math.random().toString(36).substring(2);
 
+    // Отрисовка QR-кода
+    const qrcode = new QRCode(document.getElementById("qrcode"), {
+      text: loginToken,
+      width: 170,
+      height: 170,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    // Переключение экранов
+    function showPhoneAuth() {
+      document.getElementById('step-qr').style.display = 'none';
+      document.getElementById('step-phone').style.display = 'block';
+    }
+
+    function showQRAuth() {
+      document.getElementById('step-phone').style.display = 'none';
+      document.getElementById('step-qr').style.display = 'block';
+    }
+
+    // Маска ввода телефона (+7 (XXX) XXX-XX-XX)
     const phoneInput = document.getElementById('phone-input');
     let rawPhoneNumber = "";
     let phoneCodeHash = "";
 
-    // Маска форматирования телефона
     phoneInput.addEventListener('input', (e) => {
       let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
-      
       if (!x[2]) {
         e.target.value = x[1] ? '+' + x[1] : '';
       } else {
@@ -156,23 +205,18 @@
           ? `+${x[1]} (${x[2]}` 
           : `+${x[1]} (${x[2]}) ${x[3]}` + (x[4] ? `-${x[4]}` : '') + (x[5] ? `-${x[5]}` : '');
       }
-
       rawPhoneNumber = '+' + e.target.value.replace(/\D/g, '');
     });
 
-    // Запрос кода в Telegram
+    // Отправка запроса на получение кода
     async function requestTelegramCode() {
       if (rawPhoneNumber.length < 11) {
-        alert("Пожалуйста, введите полный номер телефона!");
+        alert("Введите полный номер телефона!");
         return;
       }
 
-      const btn = document.getElementById('send-code-btn');
-      btn.innerText = "Отправка...";
-      btn.disabled = true;
-
       try {
-        const response = await fetch(`${API_URL}/send-code`, {
+        const response = await fetch('http://localhost:3000/api/send-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: rawPhoneNumber })
@@ -184,34 +228,25 @@
           phoneCodeHash = data.phoneCodeHash;
           document.getElementById('step-phone').style.display = 'none';
           document.getElementById('step-code').style.display = 'block';
-          document.getElementById('code-sent-to').innerText = `Код отправлен на ${phoneInput.value}`;
+          document.getElementById('code-sent-to').innerText = `Код отправлен на номер ${phoneInput.value}`;
         } else {
-          alert('Ошибка Telegram API: ' + data.error);
-          btn.innerText = "Получить код";
-          btn.disabled = false;
+          alert('Ошибка: ' + data.error);
         }
       } catch (err) {
-        alert('Не удалось связаться с сервером! Проверьте, запущен ли node server.js');
-        btn.innerText = "Получить код";
-        btn.disabled = false;
+        alert('Не удалось связаться с сервером авторизации.');
       }
     }
 
-    // Подтверждение кода
+    // Ввод кода подтверждения
     async function submitTelegramCode() {
       const code = document.getElementById('code-input').value;
-
       if (!code || code.length < 5) {
-        alert("Введите 5-значный код из сообщения!");
+        alert("Введите 5-значный код!");
         return;
       }
 
-      const btn = document.getElementById('login-btn');
-      btn.innerText = "Проверка...";
-      btn.disabled = true;
-
       try {
-        const response = await fetch(`${API_URL}/login`, {
+        const response = await fetch('http://localhost:3000/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -227,14 +262,10 @@
           document.getElementById('auth-screen').style.display = 'none';
           document.getElementById('app-screen').style.display = 'block';
         } else {
-          alert('Неверный код или ошибка: ' + data.error);
-          btn.innerText = "Войти";
-          btn.disabled = false;
+          alert('Ошибка входа: ' + data.error);
         }
       } catch (err) {
-        alert('Ошибка при проверке кода на сервере.');
-        btn.innerText = "Войти";
-        btn.disabled = false;
+        alert('Ошибка при проверке кода.');
       }
     }
   </script>
