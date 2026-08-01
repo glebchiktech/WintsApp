@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>WP Telegram - Auth</title>
+  <title>WP Telegram Light</title>
   <style>
     * {
       box-sizing: border-box;
@@ -52,6 +52,7 @@
       color: #aaaaaa;
       margin-bottom: 20px;
       max-width: 280px;
+      line-height: 1.4;
     }
 
     input[type="text"], input[type="number"] {
@@ -65,6 +66,7 @@
       margin-bottom: 15px;
       outline: none;
       letter-spacing: 1px;
+      border-radius: 0;
     }
 
     input:focus {
@@ -92,6 +94,11 @@
       flex: 1;
       padding: 20px;
     }
+
+    .chat-item {
+      padding: 12px;
+      border-bottom: 1px solid #222;
+    }
   </style>
 </head>
 <body>
@@ -100,39 +107,45 @@
 
   <div id="auth-screen">
     
-    <!-- ЭТАП 1: Ввод телефона -->
+    <!-- Шаг 1: Номер телефона -->
     <div id="step-phone">
       <div class="title">Вход в Telegram</div>
       <div class="subtitle">Введите ваш номер телефона для получения кода</div>
       
-      <!-- Поле с авто-маской -->
       <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__" maxlength="18">
-      <button class="btn" onclick="requestTelegramCode()">Получить код</button>
+      <button class="btn" id="send-code-btn" onclick="requestTelegramCode()">Получить код</button>
     </div>
 
-    <!-- ЭТАП 2: Ввод кода из Telegram (скрыт сначала) -->
+    <!-- Шаг 2: Ввод кода -->
     <div id="step-code" style="display: none;">
       <div class="title">Проверка кода</div>
       <div class="subtitle" id="code-sent-to">Мы отправили код в приложение Telegram</div>
       
       <input type="number" id="code-input" placeholder="Код подтверждения" maxlength="5">
-      <button class="btn" onclick="submitTelegramCode()">Войти</button>
+      <button class="btn" id="login-btn" onclick="submitTelegramCode()">Войти</button>
     </div>
 
   </div>
 
-  <!-- ЭКРАН ЧАТОВ ПОСЛЕ УСПЕШНОГО ВХОДА -->
+  <!-- Главный экран после входа -->
   <div id="app-screen">
-    <h2 style="color: #0078d7;">Добро пожаловать!</h2>
-    <p style="margin-top: 10px; color: #ccc;">Вы успешно авторизовались в Telegram аккаунте.</p>
+    <h2 style="color: #0078d7;">Чаты</h2>
+    <div class="chat-item" style="margin-top: 15px;">
+      <div style="font-weight: bold;">Избранное</div>
+      <div style="font-size: 12px; color: #888;">Вы успешно авторизовались через Telegram API!</div>
+    </div>
   </div>
 
   <script>
+    // ⚙️ НАСТРОЙКА: Если открываешь со смартфона, укажи IP компьютера вместо localhost (например: "192.168.1.15")
+    const SERVER_IP = "localhost"; 
+    const API_URL = `http://${SERVER_IP}:3000/api`;
+
     const phoneInput = document.getElementById('phone-input');
     let rawPhoneNumber = "";
     let phoneCodeHash = "";
 
-    // 📱 Маска форматирования телефона во время ввода (+7 (XXX) XXX-XX-XX)
+    // Маска форматирования телефона
     phoneInput.addEventListener('input', (e) => {
       let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
       
@@ -144,19 +157,22 @@
           : `+${x[1]} (${x[2]}) ${x[3]}` + (x[4] ? `-${x[4]}` : '') + (x[5] ? `-${x[5]}` : '');
       }
 
-      // Сохраняем чистый номер без скобок и тире для отправки на сервер
       rawPhoneNumber = '+' + e.target.value.replace(/\D/g, '');
     });
 
-    // 1. Отправка запроса на сервер для получения кода в Telegram
+    // Запрос кода в Telegram
     async function requestTelegramCode() {
       if (rawPhoneNumber.length < 11) {
         alert("Пожалуйста, введите полный номер телефона!");
         return;
       }
 
+      const btn = document.getElementById('send-code-btn');
+      btn.innerText = "Отправка...";
+      btn.disabled = true;
+
       try {
-        const response = await fetch('http://localhost:3000/api/send-code', {
+        const response = await fetch(`${API_URL}/send-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: rawPhoneNumber })
@@ -171,13 +187,17 @@
           document.getElementById('code-sent-to').innerText = `Код отправлен на ${phoneInput.value}`;
         } else {
           alert('Ошибка Telegram API: ' + data.error);
+          btn.innerText = "Получить код";
+          btn.disabled = false;
         }
       } catch (err) {
-        alert('Не удалось связаться с локальным сервером авторизации.');
+        alert('Не удалось связаться с сервером! Проверьте, запущен ли node server.js');
+        btn.innerText = "Получить код";
+        btn.disabled = false;
       }
     }
 
-    // 2. Отправка введенного кода на сервер для входа
+    // Подтверждение кода
     async function submitTelegramCode() {
       const code = document.getElementById('code-input').value;
 
@@ -186,8 +206,12 @@
         return;
       }
 
+      const btn = document.getElementById('login-btn');
+      btn.innerText = "Проверка...";
+      btn.disabled = true;
+
       try {
-        const response = await fetch('http://localhost:3000/api/login', {
+        const response = await fetch(`${API_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -204,9 +228,13 @@
           document.getElementById('app-screen').style.display = 'block';
         } else {
           alert('Неверный код или ошибка: ' + data.error);
+          btn.innerText = "Войти";
+          btn.disabled = false;
         }
       } catch (err) {
-        alert('Ошибка при проверке кода.');
+        alert('Ошибка при проверке кода на сервере.');
+        btn.innerText = "Войти";
+        btn.disabled = false;
       }
     }
   </script>
