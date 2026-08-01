@@ -14,6 +14,7 @@
       margin: 0;
       padding: 0;
       font-family: "Segoe UI", Segoe, Tahoma, sans-serif;
+      user-select: none;
     }
 
     body {
@@ -22,19 +23,19 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     header {
-      background: #0078d7;
-      color: white;
-      padding: 15px;
-      font-size: 18px;
-      font-weight: 300;
+      padding: 20px 15px 10px 15px;
+      font-size: 14px;
+      font-weight: 400;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      text-align: center;
+      letter-spacing: 2px;
+      color: #0078d7;
     }
 
+    /* ЭКРАН АВТОРИЗАЦИИ */
     #auth-screen {
       flex: 1;
       display: flex;
@@ -59,7 +60,6 @@
       line-height: 1.4;
     }
 
-    /* Стилизация контейнера QR-кода */
     #qrcode-container {
       background: #ffffff;
       padding: 12px;
@@ -68,7 +68,7 @@
       display: inline-block;
     }
 
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="email"], input[type="number"] {
       width: 100%;
       max-width: 280px;
       padding: 12px;
@@ -107,12 +107,236 @@
       font-size: 13px;
       text-decoration: underline;
       cursor: pointer;
+      display: block;
+      margin-top: 8px;
     }
 
+    /* ОСНОВНОЙ ИНТЕРФЕЙС ПРИЛОЖЕНИЯ */
     #app-screen {
       display: none;
       flex: 1;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .pivot-header {
+      display: flex;
+      gap: 20px;
+      padding: 0 15px 15px 15px;
+      border-bottom: 1px solid #222;
+    }
+
+    .pivot-item {
+      font-size: 28px;
+      font-weight: 300;
+      color: #666666;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .pivot-item.active {
+      color: #ffffff;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .tab-page {
+      display: none;
+      padding: 10px 0;
+    }
+
+    .tab-page.active {
+      display: block;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      border-bottom: 1px solid #111;
+      cursor: pointer;
+    }
+
+    .list-item:active {
+      background-color: #0078d7;
+    }
+
+    .avatar {
+      width: 45px;
+      height: 45px;
+      background-color: #0078d7;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .item-subtitle {
+      font-size: 13px;
+      color: #888888;
+      margin-top: 3px;
+    }
+
+    .settings-group {
+      padding: 15px;
+    }
+
+    .setting-title {
+      font-size: 14px;
+      color: #0078d7;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #222;
+      font-size: 15px;
+    }
+
+    /* Нижняя панель Windows Phone */
+    .app-bar {
+      height: 60px;
+      background-color: #1f1f1f;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #333;
+      position: relative;
+    }
+
+    .app-bar-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid white;
+      background: transparent;
+      color: white;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .app-bar-btn:active {
+      background-color: #0078d7;
+      border-color: #0078d7;
+    }
+
+    /* Выпадающее Metro-меню */
+    .metro-menu {
+      display: none;
+      position: absolute;
+      bottom: 60px;
+      right: 10px;
+      width: 220px;
+      background: #1f1f1f;
+      border: 1px solid #444;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+
+    .metro-menu-item {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: white;
+      border-bottom: 1px solid #2a2a2a;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .metro-menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .metro-menu-item:active {
+      background-color: #0078d7;
+    }
+
+    /* Модальные окна */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 200;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       padding: 20px;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 320px;
+      background: #151515;
+      border: 2px solid #0078d7;
+      padding: 20px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 300;
+      margin-bottom: 15px;
+      color: #0078d7;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 10px;
+      background: #222;
+      border: 1px solid #444;
+      color: white;
+      font-size: 14px;
+      margin-bottom: 15px;
+      outline: none;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn-action {
+      padding: 8px 16px;
+      background: #0078d7;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn-cancel {
+      padding: 8px 16px;
+      background: #333;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -120,39 +344,50 @@
 
   <header>Telegram WP</header>
 
+  <!-- 🔒 ЭКРАНЫ ВХОДА -->
   <div id="auth-screen">
     
-    <!-- 1. ВХОД ПО QR-КОДУ (ПО УМОЛЧАНИЮ) -->
+    <!-- 1. ВХОД ПО QR-КОДУ -->
     <div id="step-qr">
       <div class="title">Вход по QR-коду</div>
-      <div class="subtitle">
-        Открой Telegram на смартфоне → Настройки → Устройства → Подключить устройство
-      </div>
+      <div class="subtitle">Открой Telegram → Настройки → Устройства → Подключить устройство</div>
 
       <div id="qrcode-container">
         <div id="qrcode"></div>
       </div>
 
-      <br>
-      <span class="switch-link" onclick="showPhoneAuth()">Войти по номеру телефона</span>
+      <span class="switch-link" onclick="showAuthStep('step-phone')">Войти по номеру телефона</span>
+      <span class="switch-link" onclick="showAuthStep('step-email')">Войти по E-mail</span>
     </div>
 
-    <!-- 2. ВХОД ПО НОМЕРУ ТЕЛЕФОНА -->
+    <!-- 2. ВХОД ПО НОМЕРУ -->
     <div id="step-phone" style="display: none;">
       <div class="title">Вход по номеру</div>
-      <div class="subtitle">Введите номер для получения кода в Telegram</div>
+      <div class="subtitle">Введите номер для получения кода</div>
       
       <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__" maxlength="18">
       <button class="btn" onclick="requestTelegramCode()">Получить код</button>
 
-      <br>
-      <span class="switch-link" onclick="showQRAuth()">Войти по QR-коду</span>
+      <span class="switch-link" onclick="showAuthStep('step-qr')">Войти по QR-коду</span>
+      <span class="switch-link" onclick="showAuthStep('step-email')">Войти по E-mail</span>
     </div>
 
-    <!-- 3. ВВОД КОДА ИЗ СМС/ТЕЛЕГРАМ -->
+    <!-- 3. ВХОД ПО E-MAIL (НОВАЯ КНОПКА И ЭКРАН) -->
+    <div id="step-email" style="display: none;">
+      <div class="title">Вход по E-mail</div>
+      <div class="subtitle">Введите вашу почту, привязанную к аккаунту</div>
+      
+      <input type="email" id="email-input" placeholder="example@mail.com">
+      <button class="btn" onclick="requestEmailCode()">Получить код</button>
+
+      <span class="switch-link" onclick="showAuthStep('step-qr')">Войти по QR-коду</span>
+      <span class="switch-link" onclick="showAuthStep('step-phone')">Войти по номеру телефона</span>
+    </div>
+
+    <!-- 4. ВВОД КОДА ПЕРЕД ВХОДОМ -->
     <div id="step-code" style="display: none;">
       <div class="title">Проверка кода</div>
-      <div class="subtitle" id="code-sent-to">Код отправлен в ваше приложение Telegram</div>
+      <div class="subtitle" id="code-sent-to">Код отправлен в ваше приложение Telegram или на почту</div>
       
       <input type="number" id="code-input" placeholder="Код подтверждения" maxlength="5">
       <button class="btn" onclick="submitTelegramCode()">Войти</button>
@@ -160,18 +395,146 @@
 
   </div>
 
-  <!-- Экран чатов (после успешного входа) -->
+  <!-- 📱 ОСНОВНОЙ ИНТЕРФЕЙС (Чаты / Контакты / Настройки) -->
   <div id="app-screen">
-    <h2 style="color: #0078d7;">Добро пожаловать!</h2>
-    <p style="margin-top: 10px; color: #ccc;">Вы успешно авторизовались в Telegram.</p>
+    
+    <div class="pivot-header">
+      <span class="pivot-item active" onclick="switchTab('chats', this)">чаты</span>
+      <span class="pivot-item" onclick="switchTab('contacts', this)">контакты</span>
+      <span class="pivot-item" onclick="switchTab('settings', this)">настройки</span>
+    </div>
+
+    <div class="main-content">
+      
+      <!-- Чаты -->
+      <div id="tab-chats" class="tab-page active">
+        <div class="list-item">
+          <div class="avatar">ИЗ</div>
+          <div class="item-info">
+            <div class="item-title">Избранное</div>
+            <div class="item-subtitle">Заметка: дописать интерфейс WP...</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="avatar" style="background-color: #d83b01;">TG</div>
+          <div class="item-info">
+            <div class="item-title">Telegram Notifications</div>
+            <div class="item-subtitle">Вход с нового устройства...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Контакты -->
+      <div id="tab-contacts" class="tab-page">
+        <div id="contacts-list">
+          <div class="list-item">
+            <div class="avatar" style="background-color: #107c41;">ВБ</div>
+            <div class="item-info">
+              <div class="item-title">Ваня</div>
+              <div class="item-subtitle">был(а) недавно</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Настройки -->
+      <div id="tab-settings" class="tab-page">
+        <div class="settings-group">
+          <div class="setting-title">Аккаунт</div>
+          <div class="setting-row">
+            <span>Имя пользователя</span>
+            <span style="color: #888;">@gleb_dev</span>
+          </div>
+          <div class="setting-row">
+            <span>Номер / E-mail</span>
+            <span style="color: #888;" id="user-credentials">+7 (***) ***-**-**</span>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-title">Оформление</div>
+          <div class="setting-row">
+            <span>Тема оформления</span>
+            <span style="color: #0078d7;">Темная (WP Metro)</span>
+          </div>
+          <div class="setting-row">
+            <span>Цвет акцента</span>
+            <span style="color: #0078d7;">Синий (Segoe)</span>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-title">Приложение</div>
+          <div class="setting-row">
+            <span>Версия</span>
+            <span style="color: #888;">1.0.0 WP Light</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Выпадающее меню при нажатии на "+" -->
+    <div class="metro-menu" id="plus-menu">
+      <div class="metro-menu-item" onclick="openModal('modal-contact')">
+        <span>👤</span> Новый контакт
+      </div>
+      <div class="metro-menu-item" onclick="openModal('modal-group')">
+        <span>👥</span> Новая группа
+      </div>
+      <div class="metro-menu-item" onclick="openModal('modal-channel')">
+        <span>📢</span> Новый канал
+      </div>
+    </div>
+
+    <!-- Нижняя панель Windows Phone -->
+    <div class="app-bar">
+      <button class="app-bar-btn" onclick="togglePlusMenu()" title="Создать">+</button>
+      <button class="app-bar-btn" onclick="switchTab('settings', document.querySelectorAll('.pivot-item')[2])" title="Настройки">⚙</button>
+    </div>
+
+  </div>
+
+  <!-- МОДАЛЬНЫЕ ОКНА -->
+  <div class="modal-overlay" id="modal-contact">
+    <div class="modal-box">
+      <div class="modal-title">Новый контакт</div>
+      <input type="text" id="contact-name" class="modal-input" placeholder="Имя">
+      <input type="text" id="contact-phone" class="modal-input" placeholder="Номер телефона">
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal('modal-contact')">Отмена</button>
+        <button class="btn-action" onclick="addContact()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-group">
+    <div class="modal-box">
+      <div class="modal-title">Новая группа</div>
+      <input type="text" id="group-name" class="modal-input" placeholder="Название группы">
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal('modal-group')">Отмена</button>
+        <button class="btn-action" onclick="createGroup()">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-channel">
+    <div class="modal-box">
+      <div class="modal-title">Новый канал</div>
+      <input type="text" id="channel-name" class="modal-input" placeholder="Название канала">
+      <input type="text" class="modal-input" placeholder="Описание (необязательно)">
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal('modal-channel')">Отмена</button>
+        <button class="btn-action" onclick="createChannel()">Создать</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Генерация официального формата ссылки авторизации Telegram
+    // QR Код
     let loginToken = "tg://login?token=" + Math.random().toString(36).substring(2);
-
-    // Отрисовка QR-кода
-    const qrcode = new QRCode(document.getElementById("qrcode"), {
+    new QRCode(document.getElementById("qrcode"), {
       text: loginToken,
       width: 170,
       height: 170,
@@ -180,22 +543,19 @@
       correctLevel: QRCode.CorrectLevel.M
     });
 
-    // Переключение экранов
-    function showPhoneAuth() {
+    // Переключение экранов входа
+    function showAuthStep(stepId) {
       document.getElementById('step-qr').style.display = 'none';
-      document.getElementById('step-phone').style.display = 'block';
-    }
-
-    function showQRAuth() {
       document.getElementById('step-phone').style.display = 'none';
-      document.getElementById('step-qr').style.display = 'block';
+      document.getElementById('step-email').style.display = 'none';
+      document.getElementById('step-code').style.display = 'none';
+
+      document.getElementById(stepId).style.display = 'block';
     }
 
-    // Маска ввода телефона (+7 (XXX) XXX-XX-XX)
+    // Маска номера телефона
     const phoneInput = document.getElementById('phone-input');
     let rawPhoneNumber = "";
-    let phoneCodeHash = "";
-
     phoneInput.addEventListener('input', (e) => {
       let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
       if (!x[2]) {
@@ -208,65 +568,110 @@
       rawPhoneNumber = '+' + e.target.value.replace(/\D/g, '');
     });
 
-    // Отправка запроса на получение кода
-    async function requestTelegramCode() {
+    // Запрос кода по номеру
+    function requestTelegramCode() {
       if (rawPhoneNumber.length < 11) {
         alert("Введите полный номер телефона!");
         return;
       }
-
-      try {
-        const response = await fetch('http://localhost:3000/api/send-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: rawPhoneNumber })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          phoneCodeHash = data.phoneCodeHash;
-          document.getElementById('step-phone').style.display = 'none';
-          document.getElementById('step-code').style.display = 'block';
-          document.getElementById('code-sent-to').innerText = `Код отправлен на номер ${phoneInput.value}`;
-        } else {
-          alert('Ошибка: ' + data.error);
-        }
-      } catch (err) {
-        alert('Не удалось связаться с сервером авторизации.');
-      }
+      document.getElementById('code-sent-to').innerText = `Код отправлен в Telegram на ${phoneInput.value}`;
+      showAuthStep('step-code');
     }
 
-    // Ввод кода подтверждения
-    async function submitTelegramCode() {
+    // Запрос кода по E-mail
+    function requestEmailCode() {
+      const email = document.getElementById('email-input').value;
+      if (!email || !email.includes('@')) {
+        alert("Введите корректный адрес электронной почты!");
+        return;
+      }
+      document.getElementById('code-sent-to').innerText = `Код отправлен на почту ${email} и в Telegram`;
+      showAuthStep('step-code');
+    }
+
+    // Вход по коду
+    function submitTelegramCode() {
       const code = document.getElementById('code-input').value;
       if (!code || code.length < 5) {
         alert("Введите 5-значный код!");
         return;
       }
+      
+      // Переход к приложению
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'flex';
+    }
 
-      try {
-        const response = await fetch('http://localhost:3000/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: rawPhoneNumber,
-            code: code,
-            phoneCodeHash: phoneCodeHash
-          })
-        });
+    // Переключение вкладок (Pivot)
+    function switchTab(tabName, element) {
+      document.querySelectorAll('.pivot-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-page').forEach(el => el.classList.remove('active'));
 
-        const data = await response.json();
+      element.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+      document.getElementById('plus-menu').style.display = 'none';
+    }
 
-        if (data.success) {
-          document.getElementById('auth-screen').style.display = 'none';
-          document.getElementById('app-screen').style.display = 'block';
-        } else {
-          alert('Ошибка входа: ' + data.error);
-        }
-      } catch (err) {
-        alert('Ошибка при проверке кода.');
+    // Управление меню и модальными окнами
+    function togglePlusMenu() {
+      const menu = document.getElementById('plus-menu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function openModal(id) {
+      document.getElementById('plus-menu').style.display = 'none';
+      document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // Функция добавления контакта
+    function addContact() {
+      const name = document.getElementById('contact-name').value;
+      const phone = document.getElementById('contact-phone').value;
+
+      if (name.trim() === '') {
+        alert('Введите имя контакта!');
+        return;
       }
+
+      const list = document.getElementById('contacts-list');
+      const initials = name.substring(0, 2).toUpperCase();
+
+      const newItem = document.createElement('div');
+      newItem.className = 'list-item';
+      newItem.innerHTML = `
+        <div class="avatar" style="background-color: #0078d7;">${initials}</div>
+        <div class="item-info">
+          <div class="item-title">${name}</div>
+          <div class="item-subtitle">${phone || 'в сети'}</div>
+        </div>
+      `;
+
+      list.prepend(newItem);
+      closeModal('modal-contact');
+      document.getElementById('contact-name').value = '';
+      document.getElementById('contact-phone').value = '';
+
+      switchTab('contacts', document.querySelectorAll('.pivot-item')[1]);
+    }
+
+    function createGroup() {
+      const name = document.getElementById('group-name').value;
+      if (!name) return;
+      alert(`Группа "${name}" успешно создана!`);
+      closeModal('modal-group');
+      document.getElementById('group-name').value = '';
+    }
+
+    function createChannel() {
+      const name = document.getElementById('channel-name').value;
+      if (!name) return;
+      alert(`Канал "${name}" успешно создан!`);
+      closeModal('modal-channel');
+      document.getElementById('channel-name').value = '';
     }
   </script>
 </body>
