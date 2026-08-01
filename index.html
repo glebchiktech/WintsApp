@@ -4,245 +4,355 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WP Telegram Light</title>
-  
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Segoe, Tahoma, sans-serif; user-select: none; }
-    body { background-color: #000000; color: #ffffff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-    header { padding: 20px 15px 10px 15px; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #0078d7; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Segoe, Tahoma, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 20px 15px 10px 15px;
+      font-size: 14px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #0078d7;
+    }
 
     /* ЭКРАН АВТОРИЗАЦИИ */
-    #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-    .title { font-size: 22px; font-weight: 300; margin-bottom: 8px; }
-    .subtitle { font-size: 12px; color: #aaaaaa; margin-bottom: 20px; max-width: 280px; }
-    .status-msg { font-size: 12px; color: #ff4d4d; margin-bottom: 10px; min-height: 16px; }
+    #auth-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
 
-    input[type="text"], input[type="number"] { width: 100%; max-width: 280px; padding: 12px; background: #111; border: 1px solid #444; color: white; font-size: 16px; margin-bottom: 15px; outline: none; }
-    input:focus { border-color: #0078d7; }
-    .btn { width: 100%; max-width: 280px; padding: 12px; background: #0078d7; color: white; border: none; font-weight: bold; font-size: 14px; cursor: pointer; }
-    .btn:active { background: #005a9e; }
+    .title {
+      font-size: 22px;
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: #aaaaaa;
+      margin-bottom: 20px;
+      max-width: 280px;
+      line-height: 1.4;
+    }
+
+    .qr-frame {
+      background: #ffffff;
+      padding: 12px;
+      border: 3px solid #0078d7;
+      margin-bottom: 15px;
+      display: inline-block;
+      box-shadow: 0 0 15px rgba(0, 120, 215, 0.4);
+    }
+
+    .qr-img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
+
+    input[type="text"], input[type="email"], input[type="number"] {
+      width: 100%;
+      max-width: 280px;
+      padding: 12px;
+      background: #111;
+      border: 1px solid #444;
+      color: white;
+      font-size: 16px;
+      margin-bottom: 15px;
+      outline: none;
+      letter-spacing: 1px;
+    }
+
+    input:focus {
+      border-color: #0078d7;
+    }
+
+    .btn {
+      width: 100%;
+      max-width: 280px;
+      padding: 12px;
+      background: #0078d7;
+      color: white;
+      border: none;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    .btn:active {
+      background: #005a9e;
+    }
+
+    .switch-link {
+      color: #0078d7;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+      display: block;
+      margin-top: 8px;
+    }
 
     /* ИНТЕРФЕЙС ПРИЛОЖЕНИЯ */
-    #app-screen { display: none; flex: 1; flex-direction: column; height: 100%; }
-    .pivot-header { display: flex; gap: 20px; padding: 0 15px 15px 15px; border-bottom: 1px solid #222; }
-    .pivot-item { font-size: 28px; font-weight: 300; color: #666666; cursor: pointer; }
-    .pivot-item.active { color: #ffffff; }
+    #app-screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      height: 100%;
+    }
 
-    .main-content { flex: 1; overflow-y: auto; }
-    .tab-page { display: none; }
-    .tab-page.active { display: block; }
+    .pivot-header {
+      display: flex;
+      gap: 20px;
+      padding: 0 15px 15px 15px;
+      border-bottom: 1px solid #222;
+    }
 
-    .list-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #111; cursor: pointer; }
-    .list-item:active { background-color: #0078d7; }
-    .avatar { width: 45px; height: 45px; background-color: #0078d7; color: white; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin-right: 15px; }
-    .item-info { flex: 1; }
-    .item-title { font-size: 16px; font-weight: 600; }
-    .item-subtitle { font-size: 13px; color: #888888; margin-top: 3px; }
+    .pivot-item {
+      font-size: 28px;
+      font-weight: 300;
+      color: #666666;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
 
-    /* ОКНО ЧАТА */
-    #chat-view { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 150; flex-direction: column; }
-    .chat-header { padding: 15px; background: #111; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #222; }
-    .back-btn { font-size: 20px; cursor: pointer; color: #0078d7; }
-    .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .pivot-item.active {
+      color: #ffffff;
+    }
 
-    .msg-bubble { max-width: 75%; padding: 10px 14px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
-    .msg-in { background: #222222; align-self: flex-start; border-left: 3px solid #555; }
-    .msg-out { background: #0078d7; align-self: flex-end; border-right: 3px solid #004e8c; }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
 
-    .chat-input-area { padding: 10px; background: #111; display: flex; gap: 10px; }
-    .chat-input-area input { flex: 1; padding: 10px; background: #222; border: 1px solid #333; color: white; outline: none; margin-bottom: 0; }
-    .send-msg-btn { padding: 10px 18px; background: #0078d7; border: none; color: white; font-weight: bold; cursor: pointer; }
+    .tab-page {
+      display: none;
+      padding: 10px 0;
+    }
+
+    .tab-page.active {
+      display: block;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      border-bottom: 1px solid #111;
+      cursor: pointer;
+    }
+
+    .list-item:active {
+      background-color: #0078d7;
+    }
+
+    .avatar {
+      width: 45px;
+      height: 45px;
+      background-color: #0078d7;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .item-subtitle {
+      font-size: 13px;
+      color: #888888;
+      margin-top: 3px;
+    }
+
+    /* НИЖНЯЯ ПАНЕЛЬ METRO */
+    .app-bar {
+      height: 60px;
+      background-color: #1f1f1f;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #333;
+    }
+
+    .app-bar-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid white;
+      background: transparent;
+      color: white;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .app-bar-btn:active {
+      background-color: #0078d7;
+      border-color: #0078d7;
+    }
   </style>
 </head>
 <body>
 
   <header>Telegram WP</header>
 
-  <!-- АВТОРИЗАЦИЯ -->
+  <!-- 🔒 ЭКРАН ВХОДА С ТВОИМ QR-КОДОМ -->
   <div id="auth-screen">
-    <div id="status-message" class="status-msg"></div>
     
-    <div id="step-phone">
-      <div class="title">Вход в Telegram</div>
-      <div class="subtitle">Введите номер для получения реального SMS/Telegram кода</div>
-      <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__">
-      <button class="btn" onclick="sendCode()">Получить код</button>
+    <!-- 1. ВХОД ПО QR-КОДУ (ПО УМОЛЧАНИЮ) -->
+    <div id="step-qr">
+      <div class="title">Вход по QR-коду</div>
+      <div class="subtitle">Открой Telegram → Настройки → Устройства → Подключить устройство</div>
+
+      <div class="qr-frame">
+        <!-- Твой скачанный QR-код сохранен как файл qr.png или вставлен ниже -->
+        <img src="qr.png" alt="Telegram QR" class="qr-img" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://t.me/wintsapp'">
+      </div>
+
+      <button class="btn" onclick="openAppDemo()">Сканировано (Войти)</button>
+
+      <span class="switch-link" onclick="showAuthStep('step-phone')">Войти по номеру телефона</span>
+      <span class="switch-link" onclick="showAuthStep('step-email')">Войти по E-mail</span>
     </div>
 
-    <div id="step-code" style="display: none;">
-      <div class="title">Введите код</div>
-      <div class="subtitle">Код пришел в ваше официальное приложение Telegram</div>
-      <input type="number" id="code-input" placeholder="5-значный код">
-      <button class="btn" onclick="login()">Войти</button>
+    <!-- 2. ВХОД ПО НОМЕРУ -->
+    <div id="step-phone" style="display: none;">
+      <div class="title">Вход по номеру</div>
+      <div class="subtitle">Введите номер для получения кода</div>
+      
+      <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__">
+      <button class="btn" onclick="showAuthStep('step-code')">Получить код</button>
+
+      <span class="switch-link" onclick="showAuthStep('step-qr')">Вернуться к QR-коду</span>
     </div>
+
+    <!-- 3. ВХОД ПО E-MAIL -->
+    <div id="step-email" style="display: none;">
+      <div class="title">Вход по E-mail</div>
+      <div class="subtitle">Введите почту, привязанную к аккаунту</div>
+      
+      <input type="email" placeholder="example@mail.com">
+      <button class="btn" onclick="showAuthStep('step-code')">Получить код</button>
+
+      <span class="switch-link" onclick="showAuthStep('step-qr')">Вернуться к QR-коду</span>
+    </div>
+
+    <!-- 4. ВВОД КОДА -->
+    <div id="step-code" style="display: none;">
+      <div class="title">Проверка кода</div>
+      <div class="subtitle">Введите 5-значный код из Telegram</div>
+      
+      <input type="number" placeholder="12345" maxlength="5">
+      <button class="btn" onclick="openAppDemo()">Войти</button>
+    </div>
+
   </div>
 
-  <!-- ОСПАРИВАЕМЫЙ ИНТЕРФЕЙС ПРИЛОЖЕНИЯ -->
+  <!-- 📱 ОСНОВНОЙ ИНТЕРФЕЙС ПРИЛОЖЕНИЯ -->
   <div id="app-screen">
+    
     <div class="pivot-header">
-      <span class="pivot-item active">чаты</span>
+      <span class="pivot-item active" onclick="switchTab('chats', this)">чаты</span>
+      <span class="pivot-item" onclick="switchTab('contacts', this)">контакты</span>
     </div>
 
     <div class="main-content">
+      
+      <!-- Вкладка Чаты -->
       <div id="tab-chats" class="tab-page active">
-        <div id="chats-container">Загрузка ваших чатов...</div>
+        <div class="list-item">
+          <div class="avatar">ИЗ</div>
+          <div class="item-info">
+            <div class="item-title">Избранное</div>
+            <div class="item-subtitle">Проект WintsApp на GitHub Pages...</div>
+          </div>
+        </div>
+        <div class="list-item">
+          <div class="avatar" style="background-color: #107c41;">ВБ</div>
+          <div class="item-info">
+            <div class="item-title">Ваня</div>
+            <div class="item-subtitle">Привет! Как там клиент под Windows Phone?</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ПОЛНОЦЕННОЕ ОКНО ЧАТА -->
-  <div id="chat-view">
-    <div class="chat-header">
-      <span class="back-btn" onclick="closeChat()">←</span>
-      <div class="item-title" id="chat-title-name">Чат</div>
+      <!-- Вкладка Контакты -->
+      <div id="tab-contacts" class="tab-page">
+        <div class="list-item">
+          <div class="avatar" style="background-color: #107c41;">ВБ</div>
+          <div class="item-info">
+            <div class="item-title">Ваня</div>
+            <div class="item-subtitle">в сети</div>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <div class="chat-messages" id="messages-container"></div>
-    <div class="chat-input-area">
-      <input type="text" id="msg-input" placeholder="Напишите сообщение...">
-      <button class="send-msg-btn" onclick="sendMessage()">➤</button>
+
+    <!-- Нижняя панель Windows Phone -->
+    <div class="app-bar">
+      <button class="app-bar-btn" title="Создать">+</button>
+      <button class="app-bar-btn" title="Настройки">⚙</button>
     </div>
+
   </div>
 
   <script>
-    const API_URL = "http://localhost:3000/api";
-    let activeChatId = null;
-    let pollInterval = null;
+    function showAuthStep(stepId) {
+      document.getElementById('step-qr').style.display = 'none';
+      document.getElementById('step-phone').style.display = 'none';
+      document.getElementById('step-email').style.display = 'none';
+      document.getElementById('step-code').style.display = 'none';
 
-    function showStatus(text) {
-      document.getElementById('status-message').innerText = text;
+      document.getElementById(stepId).style.display = 'block';
     }
 
-    // 1. Отправка номера и запрос реального кода через сервер
-    async function sendCode() {
-      const phone = document.getElementById('phone-input').value.trim();
-      if (!phone) return showStatus("Введите номер телефона!");
-
-      showStatus("Отправка запроса...");
-      try {
-        const res = await fetch(`${API_URL}/send-code`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ phone })
-        });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('step-phone').style.display = 'none';
-          document.getElementById('step-code').style.display = 'block';
-          showStatus("");
-        } else {
-          showStatus("Ошибка: " + data.message);
-        }
-      } catch (e) {
-        showStatus("Не удалось связаться с server.js! Проверь, запущен ли он.");
-      }
+    function openAppDemo() {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'flex';
     }
 
-    // 2. Ввод кода и вход в аккаунт
-    async function login() {
-      const code = document.getElementById('code-input').value;
-      try {
-        const res = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ code })
-        });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('auth-screen').style.display = 'none';
-          document.getElementById('app-screen').style.display = 'flex';
-          loadChats();
-        } else {
-          showStatus("Ошибка кода: " + data.message);
-        }
-      } catch (e) {
-        showStatus("Ошибка авторизации");
-      }
-    }
+    function switchTab(tabName, element) {
+      document.querySelectorAll('.pivot-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-page').forEach(el => el.classList.remove('active'));
 
-    // 3. Загрузка реального списка диалогов
-    async function loadChats() {
-      try {
-        const res = await fetch(`${API_URL}/chats`);
-        const data = await res.json();
-        const container = document.getElementById('chats-container');
-        container.innerHTML = "";
-
-        if (data.success) {
-          data.chats.forEach(chat => {
-            const item = document.createElement('div');
-            item.className = 'list-item';
-            item.onclick = () => openChat(chat.id, chat.name);
-            item.innerHTML = `
-              <div class="avatar">${chat.name.substring(0,2).toUpperCase()}</div>
-              <div class="item-info">
-                <div class="item-title">${chat.name}</div>
-                <div class="item-subtitle">${chat.message || ''}</div>
-              </div>
-            `;
-            container.appendChild(item);
-          });
-        }
-      } catch (e) {
-        console.error("Ошибка загрузки чатов");
-      }
-    }
-
-    // 4. Открытие чата и запуск автообновления сообщений
-    async function openChat(id, name) {
-      activeChatId = id;
-      document.getElementById('chat-title-name').innerText = name;
-      document.getElementById('chat-view').style.display = 'flex';
-      
-      await loadMessages();
-      
-      // Авто-обновление сообщений каждые 2 секунды (чтобы видеть ответы человека)
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(loadMessages, 2000);
-    }
-
-    function closeChat() {
-      document.getElementById('chat-view').style.display = 'none';
-      if (pollInterval) clearInterval(pollInterval);
-      activeChatId = null;
-    }
-
-    // 5. Загрузка сообщений переписки
-    async function loadMessages() {
-      if (!activeChatId) return;
-      try {
-        const res = await fetch(`${API_URL}/messages/${activeChatId}`);
-        const data = await res.json();
-        if (data.success) {
-          const container = document.getElementById('messages-container');
-          container.innerHTML = "";
-          data.messages.forEach(m => {
-            if (!m.text) return;
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `msg-bubble ${m.out ? 'msg-out' : 'msg-in'}`;
-            msgDiv.innerText = m.text;
-            container.appendChild(msgDiv);
-          });
-          container.scrollTop = container.scrollHeight;
-        }
-      } catch (e) {}
-    }
-
-    // 6. Отправка сообщения
-    async function sendMessage() {
-      const input = document.getElementById('msg-input');
-      const text = input.value.trim();
-      if (!text || !activeChatId) return;
-
-      input.value = "";
-      try {
-        await fetch(`${API_URL}/send-message`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ chatId: activeChatId, message: text })
-        });
-        loadMessages();
-      } catch (e) {
-        alert("Не удалось отправить сообщение");
-      }
+      element.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
     }
   </script>
 </body>
