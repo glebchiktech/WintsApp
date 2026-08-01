@@ -1,177 +1,214 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wintsapp Direct</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Segoe UI', -apple-system, sans-serif;
-            padding: 20px;
-            max-width: 480px;
-            margin: 0 auto;
-        }
-        h1 {
-            font-size: 26px;
-            font-weight: 300;
-            color: #00a4ef;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-        }
-        .card {
-            background: #1f1f1f;
-            padding: 16px;
-            margin-bottom: 20px;
-            border-left: 4px solid #00a4ef;
-        }
-        .section-title {
-            font-size: 12px;
-            color: #888888;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-        label { display: block; font-size: 13px; color: #ccc; margin-bottom: 6px; }
-        input, textarea {
-            width: 100%;
-            background: #2b2b2b;
-            border: 1px solid #3d3d3d;
-            color: #fff;
-            padding: 12px;
-            font-size: 15px;
-            margin-bottom: 14px;
-            outline: none;
-            font-family: inherit;
-        }
-        input:focus, textarea:focus { border-color: #00a4ef; }
-        button {
-            width: 100%;
-            background-color: #00a4ef;
-            color: #fff;
-            border: none;
-            padding: 14px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
-        button:disabled { background: #444; cursor: not-allowed; }
-        button:active { background-color: #0078d7; }
-        
-        .status-badge {
-            font-size: 12px;
-            padding: 4px 8px;
-            display: inline-block;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        .online { background: #1b5e20; color: #4caf50; }
-        .offline { background: #b71c1c; color: #ff5252; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WP Telegram - Auth</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Segoe, Tahoma, sans-serif;
+    }
 
-        .alert {
-            display: none;
-            padding: 12px;
-            margin-top: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-        }
-        .alert-success { background: #1b5e20; color: #4caf50; border: 1px solid #4caf50; }
-        .alert-error { background: #b71c1c; color: #ff5252; border: 1px solid #ff5252; }
-    </style>
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #0078d7;
+      color: white;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: 300;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    #auth-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 300;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: #aaaaaa;
+      margin-bottom: 20px;
+      max-width: 280px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      max-width: 280px;
+      padding: 12px;
+      background: #111;
+      border: 1px solid #444;
+      color: white;
+      font-size: 16px;
+      margin-bottom: 15px;
+      outline: none;
+      letter-spacing: 1px;
+    }
+
+    input:focus {
+      border-color: #0078d7;
+    }
+
+    .btn {
+      width: 100%;
+      max-width: 280px;
+      padding: 12px;
+      background: #0078d7;
+      color: white;
+      border: none;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn:active {
+      background: #005a9e;
+    }
+
+    #app-screen {
+      display: none;
+      flex: 1;
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
 
-    <h1>Wintsapp</h1>
-    <div id="connectionStatus" class="status-badge offline">ПРОВЕРКА СОЕДИНЕНИЯ...</div>
+  <header>Telegram WP</header>
 
-    <div class="card">
-        <div class="section-title">Отправка сообщения</div>
-
-        <label for="phone">Номер получателя:</label>
-        <input type="tel" id="phone" placeholder="77071234567" />
-
-        <label for="message">Текст сообщения:</label>
-        <textarea id="message" rows="4" placeholder="Введите текст..."></textarea>
-
-        <button id="sendBtn" onclick="sendMessage()">Отправить</button>
-        <div id="alertBox" class="alert"></div>
+  <div id="auth-screen">
+    
+    <!-- ЭТАП 1: Ввод телефона -->
+    <div id="step-phone">
+      <div class="title">Вход в Telegram</div>
+      <div class="subtitle">Введите ваш номер телефона для получения кода</div>
+      
+      <!-- Поле с авто-маской -->
+      <input type="text" id="phone-input" placeholder="+7 (___) ___-__-__" maxlength="18">
+      <button class="btn" onclick="requestTelegramCode()">Получить код</button>
     </div>
 
-    <script>
-        // Проверка подключения сервера
-        async function checkServerStatus() {
-            try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
-                const badge = document.getElementById('connectionStatus');
+    <!-- ЭТАП 2: Ввод кода из Telegram (скрыт сначала) -->
+    <div id="step-code" style="display: none;">
+      <div class="title">Проверка кода</div>
+      <div class="subtitle" id="code-sent-to">Мы отправили код в приложение Telegram</div>
+      
+      <input type="number" id="code-input" placeholder="Код подтверждения" maxlength="5">
+      <button class="btn" onclick="submitTelegramCode()">Войти</button>
+    </div>
 
-                if (data.isConnected) {
-                    badge.textContent = 'СЕРВЕР ПОДКЛЮЧЕН К WA';
-                    badge.className = 'status-badge online';
-                } else {
-                    badge.textContent = 'ТРЕБУЕТСЯ СКАНИРОВАНИЕ QR В ТЕРМИНАЛЕ';
-                    badge.className = 'status-badge offline';
-                }
-            } catch (e) {
-                const badge = document.getElementById('connectionStatus');
-                badge.textContent = 'СЕРВЕР ОФЛАЙН';
-                badge.className = 'status-badge offline';
-            }
+  </div>
+
+  <!-- ЭКРАН ЧАТОВ ПОСЛЕ УСПЕШНОГО ВХОДА -->
+  <div id="app-screen">
+    <h2 style="color: #0078d7;">Добро пожаловать!</h2>
+    <p style="margin-top: 10px; color: #ccc;">Вы успешно авторизовались в Telegram аккаунте.</p>
+  </div>
+
+  <script>
+    const phoneInput = document.getElementById('phone-input');
+    let rawPhoneNumber = "";
+    let phoneCodeHash = "";
+
+    // 📱 Маска форматирования телефона во время ввода (+7 (XXX) XXX-XX-XX)
+    phoneInput.addEventListener('input', (e) => {
+      let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+      
+      if (!x[2]) {
+        e.target.value = x[1] ? '+' + x[1] : '';
+      } else {
+        e.target.value = !x[3] 
+          ? `+${x[1]} (${x[2]}` 
+          : `+${x[1]} (${x[2]}) ${x[3]}` + (x[4] ? `-${x[4]}` : '') + (x[5] ? `-${x[5]}` : '');
+      }
+
+      // Сохраняем чистый номер без скобок и тире для отправки на сервер
+      rawPhoneNumber = '+' + e.target.value.replace(/\D/g, '');
+    });
+
+    // 1. Отправка запроса на сервер для получения кода в Telegram
+    async function requestTelegramCode() {
+      if (rawPhoneNumber.length < 11) {
+        alert("Пожалуйста, введите полный номер телефона!");
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/api/send-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: rawPhoneNumber })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          phoneCodeHash = data.phoneCodeHash;
+          document.getElementById('step-phone').style.display = 'none';
+          document.getElementById('step-code').style.display = 'block';
+          document.getElementById('code-sent-to').innerText = `Код отправлен на ${phoneInput.value}`;
+        } else {
+          alert('Ошибка Telegram API: ' + data.error);
         }
+      } catch (err) {
+        alert('Не удалось связаться с локальным сервером авторизации.');
+      }
+    }
 
-        setInterval(checkServerStatus, 3000);
-        checkServerStatus();
+    // 2. Отправка введенного кода на сервер для входа
+    async function submitTelegramCode() {
+      const code = document.getElementById('code-input').value;
 
-        // Отправка формы
-        async function sendMessage() {
-            const phone = document.getElementById('phone').value.trim();
-            const message = document.getElementById('message').value.trim();
-            const alertBox = document.getElementById('alertBox');
-            const sendBtn = document.getElementById('sendBtn');
+      if (!code || code.length < 5) {
+        alert("Введите 5-значный код из сообщения!");
+        return;
+      }
 
-            if (!phone || !message) {
-                showAlert('Заполните номер и текст сообщения!', false);
-                return;
-            }
+      try {
+        const response = await fetch('http://localhost:3000/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: rawPhoneNumber,
+            code: code,
+            phoneCodeHash: phoneCodeHash
+          })
+        });
 
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Отправка...';
-            alertBox.style.display = 'none';
+        const data = await response.json();
 
-            try {
-                const res = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, message })
-                });
-
-                const data = await res.json();
-
-                if (data.success) {
-                    showAlert('✔ Сообщение успешно отправлено!', true);
-                    document.getElementById('message').value = '';
-                } else {
-                    showAlert('✖ Ошибка: ' + data.error, false);
-                }
-            } catch (e) {
-                showAlert('✖ Не удалось отправить запрос на сервер', false);
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Отправить';
-            }
+        if (data.success) {
+          document.getElementById('auth-screen').style.display = 'none';
+          document.getElementById('app-screen').style.display = 'block';
+        } else {
+          alert('Неверный код или ошибка: ' + data.error);
         }
-
-        function showAlert(text, isSuccess) {
-            const alertBox = document.getElementById('alertBox');
-            alertBox.textContent = text;
-            alertBox.className = 'alert ' + (isSuccess ? 'alert-success' : 'alert-error');
-            alertBox.style.display = 'block';
-        }
-    </script>
+      } catch (err) {
+        alert('Ошибка при проверке кода.');
+      }
+    }
+  </script>
 </body>
 </html>
